@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Consultar produto | Acompanhamento de Lançamentos | Ferretti</title>
+<script>(function(){try{if(localStorage.getItem('ferretti-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --azul:#2B2FA8; --azul-2:#3a3fd0; --azul-dark:#1c1f78;
+  --verde:#34c759; --verde-2:#28a745;
+  --ouro:#f5b942; --laranja:#ff6b35;
+  --bg:#f4f6fb; --card:#ffffff; --ink:#16182e; --muted:#6b6f8a; --line:#e7eaf3;
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+a{color:inherit}
+
+/* HEADER */
+header{background:linear-gradient(135deg,var(--azul-dark),var(--azul) 55%,var(--azul-2));color:#fff;padding:30px 0 70px;position:relative;overflow:hidden}
+header::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border:40px solid rgba(255,255,255,.06);border-radius:50%}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand{height:38px}
+.topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.themebtn,.navbtn{display:inline-flex;align-items:center;gap:6px;font-family:'Plus Jakarta Sans';font-size:.85rem;font-weight:600;color:#fff;background:rgba(255,255,255,.14);border:none;text-decoration:none;padding:8px 14px;border-radius:999px;cursor:pointer}
+.themebtn:hover,.navbtn:hover{background:rgba(255,255,255,.26)}
+h1.title{font-family:'Plus Jakarta Sans';font-weight:800;font-size:clamp(1.9rem,5vw,3rem);margin-top:22px;line-height:1.05}
+.subtitle{color:#d4d7ff;font-size:1.05rem;margin-top:8px;max-width:680px}
+
+section{margin-top:42px}
+h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.45rem;display:flex;align-items:center;gap:10px}
+h2 .bar{width:6px;height:24px;border-radius:6px;background:var(--azul)}
+.lead{color:var(--muted);margin-top:6px;margin-bottom:18px}
+
+/* BUSCA */
+.searchcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:-40px;position:relative;z-index:2;box-shadow:0 12px 30px rgba(20,24,60,.10)}
+.searchcard label{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.9rem;display:block;margin-bottom:8px}
+.searchcard input{width:100%;padding:14px 16px;border:2px solid var(--line);border-radius:12px;font-size:1rem;font-family:'DM Sans';background:var(--card);color:var(--ink)}
+.searchcard input:focus{outline:none;border-color:var(--azul)}
+.searchhint{color:var(--muted);font-size:.85rem;margin-top:8px}
+.notfound{color:#d33;font-size:.9rem;margin-top:10px;font-weight:600}
+
+/* RESULTADO */
+#resultado{display:none}
+.prodhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:6px}
+.prodhead .marca{font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--azul);background:#eef0ff;padding:4px 10px;border-radius:999px}
+.prodhead .linha{font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);background:var(--bg);border:1px solid var(--line);padding:4px 10px;border-radius:999px}
+.prodhead h2{margin-top:0}
+.prodcodigo{color:var(--muted);font-size:.95rem;margin-bottom:18px}
+
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.fact{background:var(--card);border-radius:16px;padding:16px 18px;box-shadow:0 8px 20px rgba(20,24,60,.06);border:1px solid var(--line)}
+.fact .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700}
+.fact .val{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.18rem;margin-top:5px}
+.fact .val.small{font-size:1rem}
+
+.chart-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:18px}
+.chart-card h3{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.05rem;margin-bottom:4px}
+.chart-card p{color:var(--muted);font-size:.88rem;margin-bottom:14px}
+.chart-card svg{display:block;width:100%;height:280px}
+
+footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;text-align:center;border-top:1px solid var(--line)}
+
+/* TEMA ESCURO */
+:root[data-theme="dark"]{
+  --bg:#0e1018; --card:#181b27; --ink:#eceef6; --muted:#9aa0bd; --line:#2a2f42; --verde-2:#34d36b;
+}
+[data-theme="dark"] .fact,[data-theme="dark"] .searchcard{box-shadow:0 12px 30px rgba(0,0,0,.45)}
+[data-theme="dark"] .prodhead .marca{background:#23283a;color:#aeb4ff}
+[data-theme="dark"] .prodhead .linha{background:#181b27}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <img class="brand" src="assets/ferretti-branco.png" alt="Ferretti distribuidora" />
+      <div class="topbar-actions">
+        <button id="themeBtn" class="themebtn" type="button"></button>
+        <a class="navbtn" href="index.html">← Lançamentos</a>
+      </div>
+    </div>
+    <h1 class="title">Consultar produto</h1>
+    <p class="subtitle">Distribuição (clientes distintos), positivação média mensal e evolução do valor vendido de qualquer produto.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="searchcard">
+    <label for="searchInput">Produto</label>
+    <input id="searchInput" list="prodList" placeholder="Digite o código ou o nome do produto..." autocomplete="off" />
+    <datalist id="prodList"></datalist>
+    <p class="searchhint" id="searchHint"></p>
+    <p class="notfound" id="notFound" style="display:none">Produto não encontrado.</p>
+  </div>
+
+  <section id="resultado">
+    <div class="prodhead">
+      <span class="marca" id="pMarca"></span>
+      <span class="linha" id="pLinha"></span>
+    </div>
+    <h2 id="pNome"></h2>
+    <div class="prodcodigo" id="pCodigo"></div>
+
+    <div class="facts" id="pFacts"></div>
+
+    <div class="chart-card">
+      <h3>Evolução mensal</h3>
+      <p>Barras = clientes distintos no mês (positivação mensal) · Linha = valor vendido no mês</p>
+      <div id="pChart"></div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p id="periodoTxt"></p>
+    <p style="margin-top:10px">Ferretti distribuidora · Acompanhamento de lançamentos · Uso interno</p>
+  </div>
+</footer>
+
+<script src="dados/produtos.js"></script>
+<script src="assets/charts.js"></script>
+<script>
+function fmtData(iso){ const p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+
+const P = window.PRODUTOS_POSITIVACAO;
+document.getElementById('periodoTxt').textContent = 'Dados de ' + P.meta.periodoDados + ' · atualizado em ' + P.meta.atualizadoEm;
+document.getElementById('searchHint').textContent = P.produtos.length + ' produtos disponíveis para consulta.';
+
+const porCodigo = {};
+P.produtos.forEach(p => porCodigo[p.codigo] = p);
+
+const datalist = document.getElementById('prodList');
+datalist.innerHTML = P.produtos.map(p => `<option value="${escapeAttr(p.codigo + ' — ' + p.descricao)}"></option>`).join('');
+
+function escapeAttr(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function buscarProduto(termo){
+  termo = (termo || '').trim();
+  if (!termo) return null;
+  const codigoDireto = termo.split(' — ')[0].trim().toUpperCase();
+  if (porCodigo[codigoDireto]) return porCodigo[codigoDireto];
+  const t = termo.toLowerCase();
+  return P.produtos.find(p => p.codigo.toLowerCase() === t)
+      || P.produtos.find(p => p.descricao.toLowerCase().includes(t) || p.codigo.toLowerCase().includes(t))
+      || null;
+}
+
+function renderProduto(p){
+  document.getElementById('notFound').style.display = 'none';
+  document.getElementById('resultado').style.display = 'block';
+  document.getElementById('pMarca').textContent = p.marca;
+  document.getElementById('pLinha').textContent = p.linha;
+  document.getElementById('pNome').textContent = p.descricao;
+  document.getElementById('pCodigo').textContent = 'Código: ' + p.codigo;
+
+  document.getElementById('pFacts').innerHTML = [
+    ['Distribuição (clientes distintos)', numFmt(p.clientesDistintosTotal), ''],
+    ['Positivação média mensal', numFmt(p.positivacaoMediaMensal) + ' clientes/mês', ''],
+    ['Valor vendido no período', brl(p.valorTotal), ''],
+    ['Quantidade vendida', numFmt(p.qtdTotal), 'small'],
+    ['Primeira venda no período', fmtData(p.primeiraVenda), 'small'],
+    ['Última venda no período', fmtData(p.ultimaVenda), 'small']
+  ].map(f => `<div class="fact"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
+
+  document.getElementById('pChart').innerHTML = comboChartSVG(p.serieMensal);
+}
+
+function tentarBuscar(termo){
+  const p = buscarProduto(termo);
+  if (p) { renderProduto(p); }
+  else {
+    document.getElementById('resultado').style.display = 'none';
+    document.getElementById('notFound').style.display = '';
+  }
+}
+
+const input = document.getElementById('searchInput');
+input.addEventListener('input', () => tentarBuscar(input.value));
+input.addEventListener('change', () => tentarBuscar(input.value));
+
+// Deep-link: produto.html?codigo=XXX
+const params = new URLSearchParams(location.search);
+const codigoInicial = params.get('codigo');
+if (codigoInicial && porCodigo[codigoInicial.toUpperCase()]) {
+  const p = porCodigo[codigoInicial.toUpperCase()];
+  input.value = p.codigo + ' — ' + p.descricao;
+  renderProduto(p);
+}
+
+// ===== Tema claro/escuro =====
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  try{ localStorage.setItem('ferretti-theme', t); }catch(e){}
+  const b = document.getElementById('themeBtn');
+  if(b) b.textContent = (t==='dark' ? '☀️ Claro' : '🌙 Escuro');
+}
+document.getElementById('themeBtn').addEventListener('click', function(){
+  const atual = document.documentElement.getAttribute('data-theme')==='dark' ? 'dark' : 'light';
+  setTheme(atual==='dark' ? 'light' : 'dark');
+});
+setTheme(document.documentElement.getAttribute('data-theme')==='dark' ? 'dark' : 'light');
+</script>
+</body>
+</html>
