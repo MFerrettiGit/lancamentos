@@ -61,6 +61,31 @@ h2 .bar{width:6px;height:24px;border-radius:6px;background:var(--azul)}
 .chart-card p{color:var(--muted);font-size:.88rem;margin-bottom:14px}
 .chart-card svg{display:block;width:100%;height:280px}
 
+/* DESTRINCHAMENTO (detalhes progressivos) */
+.disclosure{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 22px;margin-top:18px}
+.disclosure > summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.05rem}
+.disclosure > summary::-webkit-details-marker{display:none}
+.disclosure > summary::after{content:'+';font-size:1.4rem;line-height:1;color:var(--azul);font-weight:700;flex:none}
+.disclosure[open] > summary::after{content:'\2212'}
+.disclosure .dhint{font-size:.8rem;color:var(--muted);font-weight:500}
+.disclosure-body{margin-top:16px}
+.disclosure-empty{color:var(--muted);font-size:.9rem;margin-top:16px}
+
+.tbl{width:100%;border-collapse:collapse;font-size:.9rem}
+.tbl th,.tbl td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line)}
+.tbl th{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl-wrap{overflow-x:auto}
+
+.setor-item{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;background:var(--bg)}
+.setor-item summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-family:'Plus Jakarta Sans';font-weight:700;font-size:.95rem}
+.setor-item summary::-webkit-details-marker{display:none}
+.setor-item summary::after{content:'\25be';color:var(--muted);font-size:.8rem;flex:none}
+.setor-item[open] summary::after{content:'\25b4'}
+.setor-item .setor-stats{color:var(--muted);font-weight:500;font-size:.82rem}
+.setor-item .disclosure-body{margin-top:10px}
+
 footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;text-align:center;border-top:1px solid var(--line)}
 
 /* TEMA ESCURO */
@@ -70,6 +95,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 [data-theme="dark"] .fact,[data-theme="dark"] .searchcard{box-shadow:0 12px 30px rgba(0,0,0,.45)}
 [data-theme="dark"] .prodhead .marca{background:#23283a;color:#aeb4ff}
 [data-theme="dark"] .prodhead .linha{background:#181b27}
+[data-theme="dark"] .setor-item{background:#0e1018}
 </style>
 </head>
 <body>
@@ -83,7 +109,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
       </div>
     </div>
     <h1 class="title">Consultar produto</h1>
-    <p class="subtitle">Distribuição (clientes distintos), positivação média mensal e evolução do valor vendido de qualquer produto.</p>
+    <p class="subtitle">Distribuição (lojas atendidas), positivação média mensal e evolução do valor vendido de qualquer produto.</p>
   </div>
 </header>
 
@@ -111,6 +137,28 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
       <p>Barras = clientes distintos no mês (positivação mensal) · Linha = valor vendido no mês</p>
       <div id="pChart"></div>
     </div>
+
+    <details class="disclosure" open>
+      <summary>
+        <span>Detalhamento mensal — valor e quantidade</span>
+        <span class="dhint">clique para recolher</span>
+      </summary>
+      <div class="disclosure-body tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Mês</th><th class="num">Clientes</th><th class="num">Quantidade</th><th class="num">Valor</th></tr></thead>
+          <tbody id="tblMensalBody"></tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="disclosure" id="setoresBox">
+      <summary>
+        <span>Setores e clientes que compraram</span>
+        <span class="dhint">clique para abrir</span>
+      </summary>
+      <div class="disclosure-body" id="setoresBody"></div>
+      <p class="disclosure-empty" id="setoresEmpty" style="display:none">Detalhamento por setor/cliente ainda não disponível para este produto.</p>
+    </details>
   </section>
 </div>
 
@@ -139,6 +187,9 @@ datalist.innerHTML = P.produtos.map(p => `<option value="${escapeAttr(p.codigo +
 function escapeAttr(s){
   return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+function escapeHtml(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 function buscarProduto(termo){
   termo = (termo || '').trim();
@@ -160,7 +211,7 @@ function renderProduto(p){
   document.getElementById('pCodigo').textContent = 'Código: ' + p.codigo;
 
   document.getElementById('pFacts').innerHTML = [
-    ['Distribuição (clientes distintos)', numFmt(p.clientesDistintosTotal), ''],
+    ['Distribuição (lojas atendidas)', numFmt(p.clientesDistintosTotal), ''],
     ['Positivação média mensal', numFmt(p.positivacaoMediaMensal) + ' clientes/mês', ''],
     ['Valor vendido no período', brl(p.valorTotal), ''],
     ['Quantidade vendida', numFmt(p.qtdTotal), 'small'],
@@ -169,6 +220,46 @@ function renderProduto(p){
   ].map(f => `<div class="fact"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
 
   document.getElementById('pChart').innerHTML = comboChartSVG(p.serieMensal);
+
+  renderTabelaMensal(p);
+  renderSetores(p);
+}
+
+function renderTabelaMensal(p){
+  const tbody = document.getElementById('tblMensalBody');
+  const inicio = p.primeiraVenda.slice(0,7);
+  const linhas = p.serieMensal.filter(m => m.m >= inicio);
+  tbody.innerHTML = linhas.map(m => `<tr><td>${mesLabel(m.m)}</td><td class="num">${numFmt(m.c)}</td><td class="num">${numFmt(m.q)}</td><td class="num">${brl(m.v)}</td></tr>`).join('');
+}
+
+function renderSetores(p){
+  const body = document.getElementById('setoresBody');
+  const empty = document.getElementById('setoresEmpty');
+  const setores = p.setores || [];
+  if (!setores.length) {
+    body.innerHTML = '';
+    body.style.display = 'none';
+    empty.style.display = '';
+    return;
+  }
+  body.style.display = '';
+  empty.style.display = 'none';
+  body.innerHTML = setores.map(s => `
+    <details class="setor-item">
+      <summary>
+        <span>${escapeHtml(s.nome)}</span>
+        <span class="setor-stats">${numFmt(s.clientes)} cliente(s) · ${numFmt(s.q)} un · ${brl(s.v)}</span>
+      </summary>
+      <div class="disclosure-body tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Cliente</th><th>Código</th><th class="num">Quantidade</th><th class="num">Valor</th></tr></thead>
+          <tbody>
+            ${s.lista.map(c => `<tr><td>${escapeHtml(c.nome)}</td><td>${escapeHtml(c.cod)}</td><td class="num">${numFmt(c.q)}</td><td class="num">${brl(c.v)}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  `).join('');
 }
 
 function tentarBuscar(termo){
