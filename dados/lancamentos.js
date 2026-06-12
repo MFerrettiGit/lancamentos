@@ -1,5 +1,5 @@
 ﻿window.LANCAMENTOS = {
-  meta: { atualizadoEm: "12/06/2026 11:40", periodoDados: "01/2025 a 06/2026", metaClientes: 200 },
+  meta: { atualizadoEm: "12/06/2026 14:04", periodoDados: "01/2025 a 06/2026", metaClientes: 200 },
   produtos: [
   {
     codigo: "FITDEN90",

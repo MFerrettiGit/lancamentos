@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Consultar produto | Acompanhamento de Lançamentos | Ferretti</title>
+<title>Consultar | Acompanhamento de Lançamentos | Ferretti</title>
 <script>(function(){try{if(localStorage.getItem('ferretti-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
@@ -18,7 +18,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .wrap{max-width:1180px;margin:0 auto;padding:0 18px}
 a{color:inherit}
 
-/* HEADER */
 header{background:linear-gradient(135deg,var(--azul-dark),var(--azul) 55%,var(--azul-2));color:#fff;padding:30px 0 70px;position:relative;overflow:hidden}
 header::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border:40px solid rgba(255,255,255,.06);border-radius:50%}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -34,15 +33,25 @@ h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.45rem;display:fle
 h2 .bar{width:6px;height:24px;border-radius:6px;background:var(--azul)}
 .lead{color:var(--muted);margin-top:6px;margin-bottom:18px}
 
-/* BUSCA */
-.searchcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:-40px;position:relative;z-index:2;box-shadow:0 12px 30px rgba(20,24,60,.10)}
+.searchcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 22px 22px;margin-top:-40px;position:relative;z-index:2;box-shadow:0 12px 30px rgba(20,24,60,.10)}
+.modetabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.tab{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.85rem;padding:9px 16px;border-radius:999px;border:2px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer}
+.tab.active{background:var(--azul);border-color:var(--azul);color:#fff}
+.panel{display:none}
+.panel.active{display:block}
 .searchcard label{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.9rem;display:block;margin-bottom:8px}
-.searchcard input{width:100%;padding:14px 16px;border:2px solid var(--line);border-radius:12px;font-size:1rem;font-family:'DM Sans';background:var(--card);color:var(--ink)}
-.searchcard input:focus{outline:none;border-color:var(--azul)}
+.searchcard input,.searchcard select{width:100%;padding:14px 16px;border:2px solid var(--line);border-radius:12px;font-size:1rem;font-family:'DM Sans';background:var(--card);color:var(--ink)}
+.searchcard input:focus,.searchcard select:focus{outline:none;border-color:var(--azul)}
 .searchhint{color:var(--muted);font-size:.85rem;margin-top:8px}
 .notfound{color:#d33;font-size:.9rem;margin-top:10px;font-weight:600}
+.selrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.linkbtn{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.82rem;color:var(--azul);background:none;border:none;cursor:pointer;padding:0}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:8px;background:#eef0ff;color:var(--azul);font-weight:600;font-size:.82rem;padding:6px 8px 6px 12px;border-radius:999px}
+.chip button{border:none;background:rgba(43,47,168,.16);color:var(--azul);width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:.8rem;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+[data-theme="dark"] .chip{background:#23283a;color:#aeb4ff}
+[data-theme="dark"] .chip button{background:rgba(174,180,255,.2);color:#aeb4ff}
 
-/* RESULTADO */
 #resultado{display:none}
 .prodhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:6px}
 .prodhead .marca{font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--azul);background:#eef0ff;padding:4px 10px;border-radius:999px}
@@ -61,7 +70,6 @@ h2 .bar{width:6px;height:24px;border-radius:6px;background:var(--azul)}
 .chart-card p{color:var(--muted);font-size:.88rem;margin-bottom:14px}
 .chart-card svg{display:block;width:100%;height:280px}
 
-/* DESTRINCHAMENTO (detalhes progressivos) */
 .disclosure{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 22px;margin-top:18px}
 .disclosure > summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.05rem}
 .disclosure > summary::-webkit-details-marker{display:none}
@@ -77,6 +85,8 @@ h2 .bar{width:6px;height:24px;border-radius:6px;background:var(--azul)}
 .tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tbl tbody tr:last-child td{border-bottom:none}
 .tbl-wrap{overflow-x:auto}
+.tbl a{color:var(--azul);text-decoration:none;font-weight:600}
+.tbl a:hover{text-decoration:underline}
 
 .setor-item{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;background:var(--bg)}
 .setor-item summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-family:'Plus Jakarta Sans';font-weight:700;font-size:.95rem}
@@ -88,7 +98,6 @@ h2 .bar{width:6px;height:24px;border-radius:6px;background:var(--azul)}
 
 footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;text-align:center;border-top:1px solid var(--line)}
 
-/* TEMA ESCURO */
 :root[data-theme="dark"]{
   --bg:#0e1018; --card:#181b27; --ink:#eceef6; --muted:#9aa0bd; --line:#2a2f42; --verde-2:#34d36b;
 }
@@ -108,24 +117,53 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
         <a class="navbtn" href="index.html">← Lançamentos</a>
       </div>
     </div>
-    <h1 class="title">Consultar produto</h1>
-    <p class="subtitle">Distribuição (lojas atendidas), positivação média mensal e evolução do valor vendido de qualquer produto.</p>
+    <h1 class="title">Consultar</h1>
+    <p class="subtitle">Distribuição (lojas atendidas), positivação média mensal e valor vendido — por produto, por marca ou por uma seleção de produtos.</p>
   </div>
 </header>
 
 <div class="wrap">
   <div class="searchcard">
-    <label for="searchInput">Produto</label>
-    <input id="searchInput" list="prodList" placeholder="Digite o código ou o nome do produto..." autocomplete="off" />
-    <datalist id="prodList"></datalist>
-    <p class="searchhint" id="searchHint"></p>
-    <p class="notfound" id="notFound" style="display:none">Produto não encontrado.</p>
+    <div class="modetabs">
+      <button class="tab active" data-mode="produto" type="button">Produto</button>
+      <button class="tab" data-mode="marca" type="button">Marca</button>
+      <button class="tab" data-mode="selecao" type="button">Seleção</button>
+    </div>
+
+    <!-- MODO PRODUTO -->
+    <div class="panel active" id="panel-produto">
+      <label for="searchInput">Produto</label>
+      <input id="searchInput" list="prodList" placeholder="Digite o código ou o nome do produto..." autocomplete="off" />
+      <datalist id="prodList"></datalist>
+      <p class="searchhint" id="searchHint"></p>
+      <p class="notfound" id="notFound" style="display:none">Produto não encontrado.</p>
+    </div>
+
+    <!-- MODO MARCA -->
+    <div class="panel" id="panel-marca">
+      <label for="marcaSelect">Marca</label>
+      <select id="marcaSelect">
+        <option value="">Selecione uma marca…</option>
+      </select>
+      <p class="searchhint" id="marcaHint"></p>
+    </div>
+
+    <!-- MODO SELEÇÃO -->
+    <div class="panel" id="panel-selecao">
+      <label for="selInput">Adicionar produto à seleção</label>
+      <input id="selInput" list="prodList" placeholder="Digite e selecione para adicionar..." autocomplete="off" />
+      <div class="selrow">
+        <span class="searchhint" id="selHint">Nenhum produto selecionado.</span>
+        <button class="linkbtn" id="selClear" type="button" style="display:none">Limpar seleção</button>
+      </div>
+      <div class="chips" id="selChips"></div>
+    </div>
   </div>
 
   <section id="resultado">
     <div class="prodhead">
       <span class="marca" id="pMarca"></span>
-      <span class="linha" id="pLinha"></span>
+      <span class="linha" id="pLinha" style="display:none"></span>
     </div>
     <h2 id="pNome"></h2>
     <div class="prodcodigo" id="pCodigo"></div>
@@ -140,7 +178,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 
     <details class="disclosure" open>
       <summary>
-        <span>Detalhamento mensal — valor e quantidade</span>
+        <span>Detalhamento mensal — clientes, quantidade e valor</span>
         <span class="dhint">clique para recolher</span>
       </summary>
       <div class="disclosure-body tbl-wrap">
@@ -151,13 +189,26 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
       </div>
     </details>
 
+    <details class="disclosure" id="produtosBox" style="display:none">
+      <summary>
+        <span id="produtosTitulo">Produtos</span>
+        <span class="dhint">clique para abrir</span>
+      </summary>
+      <div class="disclosure-body tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Produto</th><th>Código</th><th class="num">Lojas</th><th class="num">Quantidade</th><th class="num">Valor</th></tr></thead>
+          <tbody id="produtosBody"></tbody>
+        </table>
+      </div>
+    </details>
+
     <details class="disclosure" id="setoresBox">
       <summary>
         <span>Setores e clientes que compraram</span>
         <span class="dhint">clique para abrir</span>
       </summary>
       <div class="disclosure-body" id="setoresBody"></div>
-      <p class="disclosure-empty" id="setoresEmpty" style="display:none">Detalhamento por setor/cliente ainda não disponível para este produto.</p>
+      <p class="disclosure-empty" id="setoresEmpty" style="display:none">Detalhamento por setor/cliente não disponível.</p>
     </details>
   </section>
 </div>
@@ -170,80 +221,78 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 </footer>
 
 <script src="dados/produtos.js"></script>
+<script src="dados/marcas.js"></script>
 <script src="assets/charts.js"></script>
 <script>
 function fmtData(iso){ const p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function escapeAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 const P = window.PRODUTOS_POSITIVACAO;
+const M = window.MARCAS || { marcas: [] };
+const MESES = P.produtos.length ? P.produtos[0].serieMensal.map(x => x.m) : [];
+
 document.getElementById('periodoTxt').textContent = 'Dados de ' + P.meta.periodoDados + ' · atualizado em ' + P.meta.atualizadoEm;
 document.getElementById('searchHint').textContent = P.produtos.length + ' produtos disponíveis para consulta.';
 
 const porCodigo = {};
 P.produtos.forEach(p => porCodigo[p.codigo] = p);
+const porMarca = {};
+M.marcas.forEach(m => porMarca[m.marca] = m);
 
-const datalist = document.getElementById('prodList');
-datalist.innerHTML = P.produtos.map(p => `<option value="${escapeAttr(p.codigo + ' — ' + p.descricao)}"></option>`).join('');
+document.getElementById('prodList').innerHTML =
+  P.produtos.map(p => `<option value="${escapeAttr(p.codigo + ' — ' + p.descricao)}"></option>`).join('');
 
-function escapeAttr(s){
-  return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function escapeHtml(s){
-  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+// Popula o select de marcas
+const marcaSelect = document.getElementById('marcaSelect');
+marcaSelect.innerHTML = '<option value="">Selecione uma marca…</option>' +
+  M.marcas.slice().sort((a,b)=>b.valorTotal-a.valorTotal)
+    .map(m => `<option value="${m.marca}">${m.marca} — ${escapeHtml(m.fornecedor)} (${m.numProdutos} produtos)</option>`).join('');
+document.getElementById('marcaHint').textContent = M.marcas.length + ' marcas disponíveis.';
 
-function buscarProduto(termo){
-  termo = (termo || '').trim();
-  if (!termo) return null;
-  const codigoDireto = termo.split(' — ')[0].trim().toUpperCase();
-  if (porCodigo[codigoDireto]) return porCodigo[codigoDireto];
-  const t = termo.toLowerCase();
-  return P.produtos.find(p => p.codigo.toLowerCase() === t)
-      || P.produtos.find(p => p.descricao.toLowerCase().includes(t) || p.codigo.toLowerCase().includes(t))
-      || null;
-}
-
-function renderProduto(p){
-  document.getElementById('notFound').style.display = 'none';
+/* ===== Renderização genérica ===== */
+function renderView(v){
   document.getElementById('resultado').style.display = 'block';
-  document.getElementById('pMarca').textContent = p.marca;
-  document.getElementById('pLinha').textContent = p.linha;
-  document.getElementById('pNome').textContent = p.descricao;
-  document.getElementById('pCodigo').textContent = 'Código: ' + p.codigo;
+  document.getElementById('pMarca').textContent = v.badge;
+  const lin = document.getElementById('pLinha');
+  if (v.badge2){ lin.style.display=''; lin.textContent = v.badge2; } else { lin.style.display='none'; }
+  document.getElementById('pNome').textContent = v.titulo;
+  document.getElementById('pCodigo').textContent = v.sub || '';
 
-  document.getElementById('pFacts').innerHTML = [
-    ['Distribuição (lojas atendidas)', numFmt(p.clientesDistintosTotal), ''],
-    ['Positivação média mensal', numFmt(p.positivacaoMediaMensal) + ' clientes/mês', ''],
-    ['Valor vendido no período', brl(p.valorTotal), ''],
-    ['Quantidade vendida', numFmt(p.qtdTotal), 'small'],
-    ['Primeira venda no período', fmtData(p.primeiraVenda), 'small'],
-    ['Última venda no período', fmtData(p.ultimaVenda), 'small']
-  ].map(f => `<div class="fact"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
+  document.getElementById('pFacts').innerHTML = v.facts
+    .map(f => `<div class="fact"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
 
-  document.getElementById('pChart').innerHTML = comboChartSVG(p.serieMensal);
-
-  renderTabelaMensal(p);
-  renderSetores(p);
+  document.getElementById('pChart').innerHTML = comboChartSVG(v.serie);
+  renderTabelaMensal(v.serie, v.inicio);
+  renderProdutos(v.produtos, v.produtosTitulo);
+  renderSetores(v.setores);
 }
 
-function renderTabelaMensal(p){
-  const tbody = document.getElementById('tblMensalBody');
-  const inicio = p.primeiraVenda.slice(0,7);
-  const linhas = p.serieMensal.filter(m => m.m >= inicio);
-  tbody.innerHTML = linhas.map(m => `<tr><td>${mesLabel(m.m)}</td><td class="num">${numFmt(m.c)}</td><td class="num">${numFmt(m.q)}</td><td class="num">${brl(m.v)}</td></tr>`).join('');
+function renderTabelaMensal(serie, inicio){
+  const linhas = serie.filter(m => !inicio || m.m >= inicio);
+  document.getElementById('tblMensalBody').innerHTML = linhas
+    .map(m => `<tr><td>${mesLabel(m.m)}</td><td class="num">${numFmt(m.c)}</td><td class="num">${numFmt(m.q)}</td><td class="num">${brl(m.v)}</td></tr>`).join('');
 }
 
-function renderSetores(p){
+function renderProdutos(lista, titulo){
+  const box = document.getElementById('produtosBox');
+  if (!lista || !lista.length){ box.style.display='none'; return; }
+  box.style.display='';
+  document.getElementById('produtosTitulo').textContent = titulo || 'Produtos';
+  document.getElementById('produtosBody').innerHTML = lista.map(p =>
+    `<tr><td><a href="produto.html?codigo=${escapeAttr(p.codigo)}">${escapeHtml(p.descricao)}</a></td>`+
+    `<td>${escapeHtml(p.codigo)}</td><td class="num">${numFmt(p.clientes)}</td>`+
+    `<td class="num">${numFmt(p.q)}</td><td class="num">${brl(p.v)}</td></tr>`).join('');
+}
+
+function renderSetores(setores){
+  const box = document.getElementById('setoresBox');
   const body = document.getElementById('setoresBody');
   const empty = document.getElementById('setoresEmpty');
-  const setores = p.setores || [];
-  if (!setores.length) {
-    body.innerHTML = '';
-    body.style.display = 'none';
-    empty.style.display = '';
-    return;
-  }
-  body.style.display = '';
-  empty.style.display = 'none';
+  if (!setores){ box.style.display='none'; return; }
+  box.style.display='';
+  if (!setores.length){ body.innerHTML=''; body.style.display='none'; empty.style.display=''; return; }
+  body.style.display=''; empty.style.display='none';
   body.innerHTML = setores.map(s => `
     <details class="setor-item">
       <summary>
@@ -258,33 +307,177 @@ function renderSetores(p){
           </tbody>
         </table>
       </div>
-    </details>
-  `).join('');
+    </details>`).join('');
 }
 
-function tentarBuscar(termo){
-  const p = buscarProduto(termo);
-  if (p) { renderProduto(p); }
-  else {
-    document.getElementById('resultado').style.display = 'none';
-    document.getElementById('notFound').style.display = '';
+function posMedia(serie){
+  let soma=0, n=0;
+  serie.forEach(m => { if (m.c>0){ soma+=m.c; n++; } });
+  return n ? Math.round(soma/n*10)/10 : 0;
+}
+
+/* ===== Modo PRODUTO ===== */
+function viewProduto(p){
+  return {
+    badge: p.marca, badge2: null,
+    titulo: p.descricao, sub: 'Código: ' + p.codigo,
+    facts: [
+      ['Distribuição (lojas atendidas)', numFmt(p.clientesDistintosTotal), ''],
+      ['Positivação média mensal', numFmt(p.positivacaoMediaMensal) + ' clientes/mês', ''],
+      ['Valor vendido no período', brl(p.valorTotal), ''],
+      ['Quantidade vendida', numFmt(p.qtdTotal), 'small'],
+      ['Primeira venda no período', fmtData(p.primeiraVenda), 'small'],
+      ['Última venda no período', fmtData(p.ultimaVenda), 'small']
+    ],
+    serie: p.serieMensal, inicio: p.primeiraVenda.slice(0,7),
+    produtos: null, setores: p.setores || []
+  };
+}
+
+/* ===== Modo MARCA ===== */
+function viewMarca(m){
+  return {
+    badge: 'MARCA ' + m.marca, badge2: m.fornecedor,
+    titulo: m.fornecedor + ' — ' + m.marca,
+    sub: m.numProdutos + ' produtos · ' + fmtData(m.primeiraVenda) + ' a ' + fmtData(m.ultimaVenda),
+    facts: [
+      ['Distribuição (lojas atendidas)', numFmt(m.clientesDistintosTotal), ''],
+      ['Positivação média mensal', numFmt(m.positivacaoMediaMensal) + ' clientes/mês', ''],
+      ['Valor vendido no período', brl(m.valorTotal), ''],
+      ['Quantidade vendida', numFmt(m.qtdTotal), 'small'],
+      ['Produtos da marca', numFmt(m.numProdutos), 'small']
+    ],
+    serie: m.serieMensal, inicio: m.primeiraVenda.slice(0,7),
+    produtos: m.produtos, produtosTitulo: 'Produtos da marca (' + m.numProdutos + ')',
+    setores: null
+  };
+}
+
+/* ===== Modo SELEÇÃO (agregação exata pela união de clientes) ===== */
+const selecao = new Set();
+
+function viewSelecao(){
+  const prods = [...selecao].map(c => porCodigo[c]).filter(Boolean);
+  if (!prods.length) return null;
+  const clientes = new Set();
+  const mesesCli = MESES.map(() => new Set());
+  const vMes = MESES.map(() => 0), qMes = MESES.map(() => 0);
+  let valor=0, qtd=0, primeira='9999-99-99', ultima='0000-00-00';
+  const lista = [];
+  prods.forEach(p => {
+    valor += p.valorTotal; qtd += p.qtdTotal;
+    if (p.primeiraVenda < primeira) primeira = p.primeiraVenda;
+    if (p.ultimaVenda  > ultima)   ultima   = p.ultimaVenda;
+    p.serieMensal.forEach((m,i) => { vMes[i]+=m.v; qMes[i]+=m.q; });
+    (p.setores||[]).forEach(s => s.lista.forEach(c => {
+      clientes.add(c.cod);
+      (c.m||[]).forEach(idx => { if (mesesCli[idx]) mesesCli[idx].add(c.cod); });
+    }));
+    lista.push({ codigo:p.codigo, descricao:p.descricao, clientes:p.clientesDistintosTotal, v:p.valorTotal, q:p.qtdTotal });
+  });
+  const serie = MESES.map((m,i) => ({ m, c:mesesCli[i].size, v:vMes[i], q:qMes[i] }));
+  lista.sort((a,b)=>b.v-a.v);
+  return {
+    badge: 'SELEÇÃO', badge2: prods.length + ' produtos',
+    titulo: prods.length + ' produto(s) selecionado(s)',
+    sub: 'Total combinado · ' + fmtData(primeira) + ' a ' + fmtData(ultima),
+    facts: [
+      ['Distribuição (lojas únicas)', numFmt(clientes.size), ''],
+      ['Positivação média mensal', numFmt(posMedia(serie)) + ' clientes/mês', ''],
+      ['Valor total', brl(valor), ''],
+      ['Quantidade total', numFmt(qtd), 'small'],
+      ['Produtos selecionados', numFmt(prods.length), 'small']
+    ],
+    serie, inicio: primeira.slice(0,7),
+    produtos: lista, produtosTitulo: 'Produtos da seleção (' + prods.length + ')',
+    setores: null
+  };
+}
+
+function renderSelecao(){
+  const chips = document.getElementById('selChips');
+  const hint = document.getElementById('selHint');
+  const clear = document.getElementById('selClear');
+  chips.innerHTML = [...selecao].map(c => {
+    const p = porCodigo[c];
+    return `<span class="chip">${escapeHtml(p ? p.codigo : c)}<button type="button" data-cod="${escapeAttr(c)}" title="remover">×</button></span>`;
+  }).join('');
+  chips.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { selecao.delete(b.dataset.cod); renderSelecao(); }));
+  if (selecao.size){
+    hint.textContent = selecao.size + ' produto(s) selecionado(s).';
+    clear.style.display='';
+    renderView(viewSelecao());
+  } else {
+    hint.textContent = 'Nenhum produto selecionado.';
+    clear.style.display='none';
+    document.getElementById('resultado').style.display='none';
   }
 }
 
+/* ===== Busca de produto (modo Produto) ===== */
+function buscarProduto(termo){
+  termo = (termo || '').trim();
+  if (!termo) return null;
+  const cod = termo.split(' — ')[0].trim().toUpperCase();
+  if (porCodigo[cod]) return porCodigo[cod];
+  const t = termo.toLowerCase();
+  return P.produtos.find(p => p.codigo.toLowerCase() === t)
+      || P.produtos.find(p => p.descricao.toLowerCase().includes(t) || p.codigo.toLowerCase().includes(t))
+      || null;
+}
+function tentarBuscar(termo){
+  const p = buscarProduto(termo);
+  if (p){ document.getElementById('notFound').style.display='none'; renderView(viewProduto(p)); }
+  else { document.getElementById('resultado').style.display='none'; document.getElementById('notFound').style.display=''; }
+}
 const input = document.getElementById('searchInput');
 input.addEventListener('input', () => tentarBuscar(input.value));
 input.addEventListener('change', () => tentarBuscar(input.value));
 
-// Deep-link: produto.html?codigo=XXX
+/* ===== Modo Marca ===== */
+marcaSelect.addEventListener('change', () => {
+  const m = porMarca[marcaSelect.value];
+  if (m) renderView(viewMarca(m));
+  else document.getElementById('resultado').style.display='none';
+});
+
+/* ===== Modo Seleção (adicionar via input) ===== */
+const selInput = document.getElementById('selInput');
+function addSelecao(termo){
+  const p = buscarProduto(termo);
+  if (p){ selecao.add(p.codigo); selInput.value=''; renderSelecao(); }
+}
+selInput.addEventListener('change', () => addSelecao(selInput.value));
+document.getElementById('selClear').addEventListener('click', () => { selecao.clear(); renderSelecao(); });
+
+/* ===== Troca de modo ===== */
+function setMode(mode){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.mode===mode));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+mode).classList.add('active');
+  document.getElementById('resultado').style.display='none';
+  document.getElementById('notFound').style.display='none';
+  if (mode==='marca' && marcaSelect.value){ const m=porMarca[marcaSelect.value]; if(m) renderView(viewMarca(m)); }
+  if (mode==='selecao' && selecao.size){ renderView(viewSelecao()); }
+  if (mode==='produto' && input.value){ tentarBuscar(input.value); }
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setMode(t.dataset.mode)));
+
+/* ===== Deep-link produto.html?codigo=XXX | ?marca=XXX ===== */
 const params = new URLSearchParams(location.search);
 const codigoInicial = params.get('codigo');
-if (codigoInicial && porCodigo[codigoInicial.toUpperCase()]) {
+const marcaInicial = params.get('marca');
+if (codigoInicial && porCodigo[codigoInicial.toUpperCase()]){
   const p = porCodigo[codigoInicial.toUpperCase()];
   input.value = p.codigo + ' — ' + p.descricao;
-  renderProduto(p);
+  renderView(viewProduto(p));
+} else if (marcaInicial && porMarca[marcaInicial.toUpperCase()]){
+  marcaSelect.value = marcaInicial.toUpperCase();
+  setMode('marca');
+  renderView(viewMarca(porMarca[marcaInicial.toUpperCase()]));
 }
 
-// ===== Tema claro/escuro =====
+/* ===== Tema ===== */
 function setTheme(t){
   document.documentElement.setAttribute('data-theme', t);
   try{ localStorage.setItem('ferretti-theme', t); }catch(e){}
