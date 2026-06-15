@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Consultar | Acompanhamento de Lançamentos | Ferretti</title>
+<title>Relatórios | Acompanhamento de Lançamentos | Ferretti</title>
 <script>(function(){try{if(localStorage.getItem('ferretti-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
@@ -27,8 +27,19 @@ header::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;hei
 .themebtn:hover,.navbtn:hover{background:rgba(255,255,255,.26)}
 h1.title{font-family:'Plus Jakarta Sans';font-weight:800;font-size:clamp(1.9rem,5vw,3rem);margin-top:22px;line-height:1.05}
 .subtitle{color:#d4d7ff;font-size:1.05rem;margin-top:8px;max-width:680px}
-
 h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.45rem;display:flex;align-items:center;gap:10px}
+
+/* GATE (bloqueio por senha) */
+.gate{position:fixed;inset:0;background:linear-gradient(135deg,var(--azul-dark),var(--azul));display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.gate-card{background:var(--card);border-radius:20px;padding:34px 30px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+.gate-card img{height:40px;margin-bottom:18px}
+.gate-card h2{font-size:1.3rem;justify-content:center;margin-bottom:8px}
+.gate-card p{color:var(--muted);font-size:.9rem;margin-bottom:18px}
+.gate-card input{width:100%;padding:13px 16px;border:2px solid var(--line);border-radius:12px;font-size:1rem;text-align:center;background:var(--card);color:var(--ink)}
+.gate-card input:focus{outline:none;border-color:var(--azul)}
+.gate-card button{margin-top:14px;width:100%;padding:13px;border:none;border-radius:12px;background:var(--azul);color:#fff;font-family:'Plus Jakarta Sans';font-weight:700;font-size:1rem;cursor:pointer}
+.gate-err{color:var(--vermelho);font-size:.85rem;margin-top:10px;min-height:18px;font-weight:600}
+.gate-back{display:block;margin-top:14px;font-size:.82rem;color:var(--muted);text-decoration:none}
 
 .searchcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 22px 22px;margin-top:-40px;position:relative;z-index:2;box-shadow:0 12px 30px rgba(20,24,60,.10)}
 .modetabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
@@ -40,10 +51,9 @@ h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.45rem;display:fle
 .searchcard input,.searchcard select{width:100%;padding:13px 16px;border:2px solid var(--line);border-radius:12px;font-size:1rem;font-family:'DM Sans';background:var(--card);color:var(--ink)}
 .searchcard input:focus,.searchcard select:focus{outline:none;border-color:var(--azul)}
 .searchhint{color:var(--muted);font-size:.85rem;margin-top:8px}
-.notfound{color:#d33;font-size:.9rem;margin-top:10px;font-weight:600}
 .selrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
 .linkbtn{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.82rem;color:var(--azul);background:none;border:none;cursor:pointer;padding:0}
-.checklist{margin-top:12px;max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+.checklist{margin-top:12px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:12px}
 .checkitem{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer;font-size:.9rem}
 .checkitem:last-child{border-bottom:none}
 .checkitem:hover{background:var(--bg)}
@@ -55,6 +65,11 @@ h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.45rem;display:fle
 .chip button{border:none;background:rgba(43,47,168,.16);color:var(--azul);width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:.8rem;line-height:1;display:inline-flex;align-items:center;justify-content:center}
 [data-theme="dark"] .chip,[data-theme="dark"] .checkitem .ci-mc{background:#23283a;color:#aeb4ff}
 [data-theme="dark"] .chip button{background:rgba(174,180,255,.2);color:#aeb4ff}
+
+.pubbar{background:#eef0ff;border:1px solid var(--line);border-radius:14px;padding:12px 18px;margin-top:-40px;position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}
+.pubbar span{font-size:.9rem;font-weight:600;color:var(--azul)}
+.pubbar button{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.82rem;color:#fff;background:var(--azul);border:none;padding:8px 14px;border-radius:999px;cursor:pointer}
+[data-theme="dark"] .pubbar{background:#23283a}
 
 #resultado{display:none;margin-top:34px}
 .prodhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:6px}
@@ -115,6 +130,19 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 </style>
 </head>
 <body>
+
+<div class="gate" id="gate" style="display:none">
+  <div class="gate-card">
+    <img src="assets/ferretti-azul.png" alt="Ferretti" />
+    <h2>Relatórios</h2>
+    <p>Acesso restrito. Informe a senha para continuar.</p>
+    <input id="gatePass" type="password" placeholder="Senha" autocomplete="off" />
+    <button id="gateBtn" type="button">Entrar</button>
+    <div class="gate-err" id="gateErr"></div>
+    <a class="gate-back" href="index.html">← voltar para os Lançamentos</a>
+  </div>
+</div>
+
 <header>
   <div class="wrap">
     <div class="topbar">
@@ -124,28 +152,24 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
         <a class="navbtn" href="index.html">← Lançamentos</a>
       </div>
     </div>
-    <h1 class="title">Consultar</h1>
-    <p class="subtitle">Distribuição, positivação e valor — por produto, por marca ou por uma seleção. Com filtro de período e comparativo com o ano anterior.</p>
+    <h1 class="title">Relatórios</h1>
+    <p class="subtitle">Distribuição, positivação e valor — por marca ou por produtos selecionados. Filtro de período e comparativo com o ano anterior.</p>
   </div>
 </header>
 
 <div class="wrap">
-  <div class="searchcard">
+  <div class="pubbar" id="pubbar" style="display:none">
+    <span id="pubbarTxt">Detalhe de produto de lançamento · acesso livre</span>
+    <button id="pubbarBtn" type="button">🔒 Relatórios completos</button>
+  </div>
+
+  <div class="searchcard" id="searchcard" style="display:none">
     <div class="modetabs">
-      <button class="tab active" data-mode="produto" type="button">Produto</button>
-      <button class="tab" data-mode="marca" type="button">Marca</button>
-      <button class="tab" data-mode="selecao" type="button">Seleção</button>
+      <button class="tab active" data-mode="marca" type="button">Marca</button>
+      <button class="tab" data-mode="selecao" type="button">Produto</button>
     </div>
 
-    <div class="panel active" id="panel-produto">
-      <label for="searchInput">Produto</label>
-      <input id="searchInput" list="prodList" placeholder="Digite o código ou o nome do produto..." autocomplete="off" />
-      <datalist id="prodList"></datalist>
-      <p class="searchhint" id="searchHint"></p>
-      <p class="notfound" id="notFound" style="display:none">Produto não encontrado.</p>
-    </div>
-
-    <div class="panel" id="panel-marca">
+    <div class="panel active" id="panel-marca">
       <label for="marcaSelect">Marca</label>
       <select id="marcaSelect"><option value="">Selecione uma marca…</option></select>
       <p class="searchhint" id="marcaHint"></p>
@@ -188,23 +212,14 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
     </div>
 
     <details class="disclosure" open>
-      <summary>
-        <span>Detalhamento mensal</span>
-        <span class="dhint">clique para recolher</span>
-      </summary>
+      <summary><span>Detalhamento mensal</span><span class="dhint">clique para recolher</span></summary>
       <div class="disclosure-body tbl-wrap">
-        <table class="tbl" id="tblMensal">
-          <thead id="tblMensalHead"></thead>
-          <tbody id="tblMensalBody"></tbody>
-        </table>
+        <table class="tbl" id="tblMensal"><thead id="tblMensalHead"></thead><tbody id="tblMensalBody"></tbody></table>
       </div>
     </details>
 
     <details class="disclosure" id="produtosBox" style="display:none">
-      <summary>
-        <span id="produtosTitulo">Produtos</span>
-        <span class="dhint">clique para abrir</span>
-      </summary>
+      <summary><span id="produtosTitulo">Produtos</span><span class="dhint">clique para abrir</span></summary>
       <div class="disclosure-body tbl-wrap">
         <table class="tbl">
           <thead><tr><th>Produto</th><th>Código</th><th class="num">Lojas</th><th class="num">Quantidade</th><th class="num">Valor</th></tr></thead>
@@ -214,10 +229,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
     </details>
 
     <details class="disclosure" id="setoresBox">
-      <summary>
-        <span>Setores e clientes que compraram</span>
-        <span class="dhint">período completo · clique para abrir</span>
-      </summary>
+      <summary><span>Setores e clientes que compraram</span><span class="dhint">período completo · clique para abrir</span></summary>
       <div class="disclosure-body" id="setoresBody"></div>
       <p class="disclosure-empty" id="setoresEmpty" style="display:none">Detalhamento por setor/cliente não disponível.</p>
     </details>
@@ -233,6 +245,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 
 <script src="dados/produtos.js"></script>
 <script src="dados/marcas.js"></script>
+<script src="dados/lancamentos.js"></script>
 <script src="assets/charts.js"></script>
 <script>
 function fmtData(iso){ const p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
@@ -241,17 +254,15 @@ function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 
 const P = window.PRODUTOS_POSITIVACAO;
 const MK = window.MARCAS || { marcas: [] };
+const LANC = window.LANCAMENTOS || { produtos: [] };
 const MESES = P.produtos.length ? P.produtos[0].serieMensal.map(x => x.m) : [];
+const LAUNCH = new Set(LANC.produtos.map(p => p.codigo));
 
 document.getElementById('periodoTxt').textContent = 'Dados de ' + P.meta.periodoDados + ' · atualizado em ' + P.meta.atualizadoEm;
-document.getElementById('searchHint').textContent = P.produtos.length + ' produtos disponíveis para consulta.';
 
 const porCodigo = {}; P.produtos.forEach(p => porCodigo[p.codigo] = p);
 const porMarca = {}; MK.marcas.forEach(m => porMarca[m.marca] = m);
 const marcasOrden = MK.marcas.slice().sort((a,b)=>b.valorTotal-a.valorTotal);
-
-document.getElementById('prodList').innerHTML =
-  P.produtos.map(p => `<option value="${escapeAttr(p.codigo + ' — ' + p.descricao)}"></option>`).join('');
 
 const marcaSelect = document.getElementById('marcaSelect');
 marcaSelect.innerHTML = '<option value="">Selecione uma marca…</option>' +
@@ -322,7 +333,6 @@ function render(){
   document.getElementById('pFacts').innerHTML = facts
     .map(f=>`<div class="fact"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
 
-  // YoY: valor do mesmo mês no ano anterior
   let prev = null;
   if(YOY){ prev=[]; for(let i=i0;i<=i1;i++) prev.push(i-12>=0 ? agg.fullV[i-12] : null); }
 
@@ -332,7 +342,6 @@ function render(){
     : 'Barras = clientes distintos no mês · Linha verde = valor vendido';
   renderTabela(agg.serie, agg.dist, prev);
 
-  // Lista de produtos (marca / seleção) recalculada no período
   if(CTX.mode!=='produto'){
     const rows = CTX.prods.map(p=>{ const a=aggregate([p], i0, i1);
       return { codigo:p.codigo, descricao:p.descricao, clientes:a.dist, v:a.valor, q:a.qtd }; })
@@ -345,18 +354,15 @@ function render(){
 
 function renderTabela(serie, distTotal, prev){
   const head = document.getElementById('tblMensalHead');
-  if(prev){
-    head.innerHTML = '<tr><th>Mês</th><th class="num">Clientes</th><th class="num">Qtd</th><th class="num">Valor</th><th class="num">Valor (ano ant.)</th><th class="num">Crescimento</th></tr>';
-  } else {
-    head.innerHTML = '<tr><th>Mês</th><th class="num">Clientes</th><th class="num">Quantidade</th><th class="num">Valor</th></tr>';
-  }
+  head.innerHTML = prev
+    ? '<tr><th>Mês</th><th class="num">Clientes</th><th class="num">Qtd</th><th class="num">Valor</th><th class="num">Valor (ano ant.)</th><th class="num">Crescimento</th></tr>'
+    : '<tr><th>Mês</th><th class="num">Clientes</th><th class="num">Quantidade</th><th class="num">Valor</th></tr>';
   let totV=0, totQ=0, totPrev=0;
   const rows = serie.map((m,idx)=>{
     totV+=m.v; totQ+=m.q;
     if(prev){
       const pv = prev[idx]; totPrev += (pv||0);
-      let d='—';
-      if(pv && pv>0){ const dd=(m.v-pv)/pv*100; d=`<span class="${dd>=0?'up':'down'}">${dd>=0?'+':''}${dd.toFixed(0)}%</span>`; }
+      let d='—'; if(pv && pv>0){ const dd=(m.v-pv)/pv*100; d=`<span class="${dd>=0?'up':'down'}">${dd>=0?'+':''}${dd.toFixed(0)}%</span>`; }
       return `<tr><td>${mesLabel(m.m)}</td><td class="num">${numFmt(m.c)}</td><td class="num">${numFmt(m.q)}</td><td class="num">${brl(m.v)}</td><td class="num">${pv==null?'—':brl(pv)}</td><td class="num">${d}</td></tr>`;
     }
     return `<tr><td>${mesLabel(m.m)}</td><td class="num">${numFmt(m.c)}</td><td class="num">${numFmt(m.q)}</td><td class="num">${brl(m.v)}</td></tr>`;
@@ -377,8 +383,7 @@ function renderProdutos(lista, titulo){
   box.style.display='';
   document.getElementById('produtosTitulo').textContent = titulo || 'Produtos';
   document.getElementById('produtosBody').innerHTML = lista.map(p=>
-    `<tr><td><a href="produto.html?codigo=${escapeAttr(p.codigo)}">${escapeHtml(p.descricao)}</a></td>`+
-    `<td>${escapeHtml(p.codigo)}</td><td class="num">${numFmt(p.clientes)}</td>`+
+    `<tr><td>${escapeHtml(p.descricao)}</td><td>${escapeHtml(p.codigo)}</td><td class="num">${numFmt(p.clientes)}</td>`+
     `<td class="num">${numFmt(p.q)}</td><td class="num">${brl(p.v)}</td></tr>`).join('');
 }
 
@@ -422,24 +427,6 @@ function showSelecao(){
   render();
 }
 
-/* ===== Busca produto ===== */
-function buscarProduto(termo){
-  termo=(termo||'').trim(); if(!termo) return null;
-  const cod=termo.split(' — ')[0].trim().toUpperCase();
-  if(porCodigo[cod]) return porCodigo[cod];
-  const t=termo.toLowerCase();
-  return P.produtos.find(p=>p.codigo.toLowerCase()===t)
-      || P.produtos.find(p=>p.descricao.toLowerCase().includes(t)||p.codigo.toLowerCase().includes(t)) || null;
-}
-const input=document.getElementById('searchInput');
-function tentarBuscar(t){
-  const p=buscarProduto(t);
-  if(p){ document.getElementById('notFound').style.display='none'; showProduto(p); }
-  else { document.getElementById('resultado').style.display='none'; document.getElementById('notFound').style.display=''; }
-}
-input.addEventListener('input', ()=>tentarBuscar(input.value));
-input.addEventListener('change', ()=>tentarBuscar(input.value));
-
 /* ===== Marca ===== */
 marcaSelect.addEventListener('change', ()=>{ if(marcaSelect.value) showMarca(marcaSelect.value); else document.getElementById('resultado').style.display='none'; });
 
@@ -473,7 +460,7 @@ selMarca.addEventListener('change', renderChecklist);
 selSearch.addEventListener('input', renderChecklist);
 document.getElementById('selClear').addEventListener('click', ()=>{ selecao.clear(); renderChecklist(); atualizaSelecao(); });
 
-/* ===== Controles de período / YoY ===== */
+/* ===== Período / YoY ===== */
 perDe.addEventListener('change', render);
 perAte.addEventListener('change', render);
 document.getElementById('perReset').addEventListener('click', ()=>{ perDe.value=0; perAte.value=MESES.length-1; render(); });
@@ -485,24 +472,78 @@ function setMode(mode){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+mode).classList.add('active');
   document.getElementById('resultado').style.display='none';
-  document.getElementById('notFound').style.display='none';
-  if(mode==='produto' && input.value) tentarBuscar(input.value);
   if(mode==='marca' && marcaSelect.value) showMarca(marcaSelect.value);
   if(mode==='selecao'){ renderChecklist(); if(selecao.size) showSelecao(); }
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>setMode(t.dataset.mode)));
-renderChecklist();
 
-/* ===== Deep-link ===== */
-const params=new URLSearchParams(location.search);
-const ci=params.get('codigo'), mi=params.get('marca');
-if(ci && porCodigo[ci.toUpperCase()]){ const p=porCodigo[ci.toUpperCase()]; input.value=p.codigo+' — '+p.descricao; showProduto(p); }
-else if(mi && porMarca[mi.toUpperCase()]){ marcaSelect.value=mi.toUpperCase(); setMode('marca'); }
+/* ===== Bloqueio por senha ===== */
+const HASHES = new Set([
+  '8f21a995f2b3c950e6ebb59612a0edb6b534a4ea41a1c602393a5417e0a25876',
+  '15f54d41cbfe598bd87f5109489c4f435db816e9e5ea1d14f335aa742671786b',
+  'a4f55b36371b2ab32db9278b6d593df4157c2ea7b5b50c32a5eac40b94afe582',
+  '4f8e6e70b40a293f8cb6c183b20adbca7769d9b423c6fb1f28716b24923be82d',
+  '6a88e91d86f376c4692a3f0cbb4d98fc910d89375bee43e569b450000e362327'
+]);
+function isAuth(){ try{ return sessionStorage.getItem('rel-auth')==='1'; }catch(e){ return false; } }
+async function sha256hex(s){
+  const b=new TextEncoder().encode((s||'').toLowerCase());
+  const h=await crypto.subtle.digest('SHA-256', b);
+  return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+function showGate(){
+  document.getElementById('gate').style.display='flex';
+  document.getElementById('searchcard').style.display='none';
+  document.getElementById('pubbar').style.display='none';
+  document.getElementById('resultado').style.display='none';
+  setTimeout(()=>document.getElementById('gatePass').focus(),50);
+}
+function unlockFull(){
+  try{ sessionStorage.setItem('rel-auth','1'); }catch(e){}
+  document.getElementById('gate').style.display='none';
+  document.getElementById('pubbar').style.display='none';
+  document.getElementById('searchcard').style.display='';
+  if(!applyDeepLink()) setMode('marca');
+}
+async function tentarSenha(){
+  const hex = await sha256hex(document.getElementById('gatePass').value.trim());
+  if(HASHES.has(hex)){ unlockFull(); }
+  else { document.getElementById('gateErr').textContent='Senha incorreta.'; }
+}
+document.getElementById('gateBtn').addEventListener('click', tentarSenha);
+document.getElementById('gatePass').addEventListener('keydown', e=>{ if(e.key==='Enter') tentarSenha(); });
+document.getElementById('pubbarBtn').addEventListener('click', showGate);
+
+/* ===== Deep-link e inicialização ===== */
+const params = new URLSearchParams(location.search);
+const ci = params.get('codigo'), mi = params.get('marca');
+function applyDeepLink(){
+  if(mi && porMarca[mi.toUpperCase()]){ setMode('marca'); marcaSelect.value=mi.toUpperCase(); showMarca(mi.toUpperCase()); return true; }
+  if(ci && porCodigo[ci.toUpperCase()]){ showProduto(porCodigo[ci.toUpperCase()]); return true; }
+  return false;
+}
+function init(){
+  if(ci && LAUNCH.has(ci.toUpperCase()) && porCodigo[ci.toUpperCase()] && !isAuth()){
+    // Detalhe PÚBLICO de produto de lançamento (sem senha)
+    document.getElementById('gate').style.display='none';
+    document.getElementById('searchcard').style.display='none';
+    document.getElementById('pubbar').style.display='';
+    showProduto(porCodigo[ci.toUpperCase()]);
+  } else if(isAuth()){
+    document.getElementById('gate').style.display='none';
+    document.getElementById('searchcard').style.display='';
+    if(!applyDeepLink()) setMode('marca');
+  } else {
+    showGate();
+  }
+}
 
 /* ===== Tema ===== */
 function setTheme(t){ document.documentElement.setAttribute('data-theme',t); try{localStorage.setItem('ferretti-theme',t);}catch(e){} const b=document.getElementById('themeBtn'); if(b)b.textContent=(t==='dark'?'☀️ Claro':'🌙 Escuro'); }
 document.getElementById('themeBtn').addEventListener('click', function(){ const a=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light'; setTheme(a==='dark'?'light':'dark'); });
 setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light');
+
+init();
 </script>
 </body>
 </html>
