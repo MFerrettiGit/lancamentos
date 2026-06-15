@@ -183,7 +183,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 
     <div class="chart-card">
       <h3>Evolução mensal</h3>
-      <p>Barras = clientes distintos no mês · Linha verde = valor vendido · Tracejado = mesmo mês do ano anterior</p>
+      <p id="chartDesc">Barras = clientes distintos no mês · Linha verde = valor vendido</p>
       <div id="pChart"></div>
     </div>
 
@@ -326,7 +326,10 @@ function render(){
   let prev = null;
   if(YOY){ prev=[]; for(let i=i0;i<=i1;i++) prev.push(i-12>=0 ? agg.fullV[i-12] : null); }
 
-  document.getElementById('pChart').innerHTML = comboChartSVG2(agg.serie, { prev });
+  document.getElementById('pChart').innerHTML = YOY ? comboBarsSVG(agg.serie, prev) : comboChartSVG2(agg.serie, {});
+  document.getElementById('chartDesc').textContent = YOY
+    ? 'Barras de valor vendido: azul = ano atual · dourado = mesmo mês do ano anterior'
+    : 'Barras = clientes distintos no mês · Linha verde = valor vendido';
   renderTabela(agg.serie, agg.dist, prev);
 
   // Lista de produtos (marca / seleção) recalculada no período
@@ -343,7 +346,7 @@ function render(){
 function renderTabela(serie, distTotal, prev){
   const head = document.getElementById('tblMensalHead');
   if(prev){
-    head.innerHTML = '<tr><th>Mês</th><th class="num">Clientes</th><th class="num">Qtd</th><th class="num">Valor</th><th class="num">Valor (ano ant.)</th><th class="num">Δ%</th></tr>';
+    head.innerHTML = '<tr><th>Mês</th><th class="num">Clientes</th><th class="num">Qtd</th><th class="num">Valor</th><th class="num">Valor (ano ant.)</th><th class="num">Crescimento</th></tr>';
   } else {
     head.innerHTML = '<tr><th>Mês</th><th class="num">Clientes</th><th class="num">Quantidade</th><th class="num">Valor</th></tr>';
   }

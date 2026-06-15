@@ -108,6 +108,42 @@ function comboChartSVG2(serie, opts) {
   </svg>`;
 }
 
+// Comparativo ano a ano: barras agrupadas de VALOR (atual x mesmo mes do ano anterior)
+function comboBarsSVG(serie, prev, opts) {
+  opts = opts || {};
+  const w = opts.width || 760, h = opts.height || 300;
+  const padL = 46, padR = 20, padT = 30, padB = 42;
+  const innerW = w - padL - padR, innerH = h - padT - padB;
+  if (!serie.length) return '<p style="color:var(--muted)">Sem dados no período.</p>';
+  let maxV = 1;
+  serie.forEach((m, i) => { maxV = Math.max(maxV, m.v, (prev && prev[i]) || 0); });
+  const n = serie.length, slot = innerW / n;
+  const gap = Math.min(slot * 0.12, 6);
+  const bw = Math.max(4, (slot * 0.72 - gap) / 2);
+  const yV = v => padT + innerH - (v / maxV) * innerH;
+  const showLbl = n <= 14;
+  let bars = '', xlbl = '', lbls = '';
+  serie.forEach((m, i) => {
+    const cxc = padL + i * slot + slot / 2;
+    const x1 = cxc - gap / 2 - bw, x2 = cxc + gap / 2;
+    const va = m.v, vp = (prev && prev[i]) || 0;
+    const ya = yV(va), yp = yV(vp);
+    bars += `<rect x="${x1.toFixed(1)}" y="${ya.toFixed(1)}" width="${bw.toFixed(1)}" height="${(padT + innerH - ya).toFixed(1)}" rx="2.5" fill="#2B2FA8"><title>${mesLabel(m.m)} atual: ${brl(va)}</title></rect>`;
+    bars += `<rect x="${x2.toFixed(1)}" y="${yp.toFixed(1)}" width="${bw.toFixed(1)}" height="${(padT + innerH - yp).toFixed(1)}" rx="2.5" fill="#f5b942"><title>${mesLabel(m.m)} ano anterior: ${brl(vp)}</title></rect>`;
+    if (showLbl) {
+      if (va > 0) lbls += `<text x="${(x1 + bw / 2).toFixed(1)}" y="${(ya - 4).toFixed(1)}" font-size="8.5" font-weight="700" fill="#2B2FA8" text-anchor="middle" font-family="DM Sans">${brlShort(va)}</text>`;
+      if (vp > 0) lbls += `<text x="${(x2 + bw / 2).toFixed(1)}" y="${(yp - 4).toFixed(1)}" font-size="8.5" font-weight="700" fill="#a5740a" text-anchor="middle" font-family="DM Sans">${brlShort(vp)}</text>`;
+    }
+    xlbl += `<text x="${cxc.toFixed(1)}" y="${h - 14}" font-size="10" fill="#6b6f8a" text-anchor="middle" font-family="DM Sans">${mesLabel(m.m)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" class="combo">
+    ${bars}${lbls}${xlbl}
+    <g font-family="DM Sans" font-size="10" fill="#6b6f8a">
+      <text x="${padL}" y="16">valor vendido — <tspan fill="#2B2FA8" font-weight="700">azul = ano atual</tspan> · <tspan fill="#a5740a" font-weight="700">dourado = ano anterior</tspan></text>
+    </g>
+  </svg>`;
+}
+
 // Grafico combinado: barras (clientes distintos / positivacao mensal) + linha (valor vendido)
 function comboChartSVG(meses, opts) {
   opts = opts || {};
