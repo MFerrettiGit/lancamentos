@@ -1,13 +1,5 @@
-// Gerado de senhas.json + pares Regional|Setor reais do lancamentos. NAO editar a mao.
+// Gerado de senhas.json + setores ATIVOS do lancamentos (Centro Oeste fora). NAO editar a mao.
 window.SETOR_REGIONAL = {
-  "ARACATUBA": "CENTRO OESTE",
-  "AVARE": "CENTRO OESTE",
-  "BAURU": "CENTRO OESTE",
-  "FERNANDOPOLIS": "CENTRO OESTE",
-  "JABOTICABAL": "CENTRO OESTE",
-  "MARILIA": "CENTRO OESTE",
-  "PRES.PRUDENTE": "CENTRO OESTE",
-  "RIO PRETO": "CENTRO OESTE",
   "AMERICANA": "NORDESTE",
   "CIRCUITO": "NORDESTE",
   "FRANCA": "NORDESTE",

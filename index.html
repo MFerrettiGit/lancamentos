@@ -161,13 +161,19 @@ function scoped(p){
 
 function renderConteudo(){
   const meta = META_SETOR * nSetoresEscopo();
-  const dados = L.produtos.map(p=>{ const s=scoped(p); return {p, clientesAtual:s.clientesAtual, serie:s.serie, meta}; });
+  const hoje = new Date();
+  let dados = L.produtos.map(p=>{ const s=scoped(p);
+    const fs=new Date(p.lancamento+'T00:00:00'); const dias=Math.floor((hoje-fs)/86400000);
+    // graduado no escopo = passou 90 dias E bateu a meta -> sai da lista
+    const graduado = dias>90 && s.clientesAtual>=meta;
+    return {p, clientesAtual:s.clientesAtual, serie:s.serie, meta, dias, graduado};
+  }).filter(d=>!d.graduado);
   const atingiram = dados.filter(d=>d.clientesAtual>=d.meta).length;
   const escopoTxt = ALLOWED ? (nSetoresEscopo()+' setor(es)') : (TODOS_SETORES+' setores');
 
   document.getElementById('facts').innerHTML=[
-    ['Lançamentos acompanhados', L.produtos.length, ''],
-    ['Já atingiram a meta', atingiram+' de '+L.produtos.length, atingiram>0?'live':''],
+    ['Lançamentos em acompanhamento', dados.length, ''],
+    ['Já bateram a meta (no prazo)', atingiram+' de '+dados.length, atingiram>0?'live':''],
     ['Meta', numFmt(meta)+' clientes ('+META_SETOR+'/setor × '+nSetoresEscopo()+')', 'small'],
     ['Dados até', L.meta.atualizadoEm, 'small']
   ].map(f=>`<div class="fact ${f[2]==='live'?'live':''}"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
