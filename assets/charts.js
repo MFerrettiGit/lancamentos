@@ -108,6 +108,30 @@ function comboChartSVG2(serie, opts) {
   </svg>`;
 }
 
+// Barras de CLIENTES por mes (usado quando o valor mensal nao se aplica - visao por setor)
+function clientsBarsSVG(serie, opts) {
+  opts = opts || {};
+  const w = opts.width || 760, h = opts.height || 300;
+  const padL = 30, padR = 20, padT = 30, padB = 42;
+  const innerW = w - padL - padR, innerH = h - padT - padB;
+  if (!serie.length) return '<p style="color:var(--muted)">Sem dados no período.</p>';
+  const maxC = Math.max(...serie.map(m => m.c), 1);
+  const n = serie.length, slot = innerW / n;
+  const barW = Math.min(slot * 0.55, 34);
+  let bars = '', lbls = '', xlbl = '';
+  const showLbl = n <= 20;
+  serie.forEach((m, i) => {
+    const cxc = padL + i * slot + slot / 2;
+    const x = cxc - barW / 2;
+    const bh = (m.c / maxC) * innerH, y = padT + innerH - bh;
+    bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="#2B2FA8" opacity="0.85"><title>${mesLabel(m.m)}: ${m.c} clientes</title></rect>`;
+    if (showLbl && m.c > 0) lbls += `<text x="${cxc.toFixed(1)}" y="${(y - 4).toFixed(1)}" font-size="10" font-weight="700" fill="#2B2FA8" text-anchor="middle" font-family="DM Sans">${m.c}</text>`;
+    xlbl += `<text x="${cxc.toFixed(1)}" y="${h - 14}" font-size="10" fill="#6b6f8a" text-anchor="middle" font-family="DM Sans">${mesLabel(m.m)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" class="combo">${bars}${lbls}${xlbl}
+    <g font-family="DM Sans" font-size="10" fill="#6b6f8a"><text x="${padL}" y="16">clientes distintos no mês</text></g></svg>`;
+}
+
 // Comparativo ano a ano: barras agrupadas de VALOR (atual x mesmo mes do ano anterior)
 function comboBarsSVG(serie, prev, opts) {
   opts = opts || {};

@@ -1,5 +1,5 @@
 ﻿window.PRODUTOS_POSITIVACAO = {
-  meta: { atualizadoEm: "12/06/2026 14:04", periodoDados: "01/2025 a 06/2026" },
+  meta: { atualizadoEm: "15/06/2026 16:23", periodoDados: "01/2025 a 06/2026" },
   produtos: [
   {
     codigo: "ALGBELD50",

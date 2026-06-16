@@ -8,17 +8,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --azul:#2B2FA8; --azul-2:#3a3fd0; --azul-dark:#1c1f78;
-  --verde:#34c759; --verde-2:#28a745;
-  --ouro:#f5b942; --laranja:#ff6b35;
-  --bg:#f4f6fb; --card:#ffffff; --ink:#16182e; --muted:#6b6f8a; --line:#e7eaf3;
-}
+:root{--azul:#2B2FA8;--azul-2:#3a3fd0;--azul-dark:#1c1f78;--verde:#34c759;--verde-2:#28a745;--ouro:#f5b942;--laranja:#ff6b35;--bg:#f4f6fb;--card:#ffffff;--ink:#16182e;--muted:#6b6f8a;--line:#e7eaf3;--vermelho:#d33;}
 body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
 .wrap{max-width:1180px;margin:0 auto;padding:0 18px}
 a{color:inherit}
-
-/* HEADER */
 header{background:linear-gradient(135deg,var(--azul-dark),var(--azul) 55%,var(--azul-2));color:#fff;padding:30px 0 90px;position:relative;overflow:hidden}
 header::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border:40px solid rgba(255,255,255,.06);border-radius:50%}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -28,53 +21,67 @@ header::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;hei
 .themebtn:hover,.navbtn:hover{background:rgba(255,255,255,.26)}
 h1.title{font-family:'Plus Jakarta Sans';font-weight:800;font-size:clamp(1.9rem,5vw,3rem);margin-top:22px;line-height:1.05}
 .subtitle{color:#d4d7ff;font-size:1.05rem;margin-top:8px;max-width:680px}
-
-/* FACT STRIP */
-.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:-58px;position:relative;z-index:2}
+.gate{position:fixed;inset:0;background:linear-gradient(135deg,var(--azul-dark),var(--azul));display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.gate-card{background:var(--card);border-radius:20px;padding:34px 30px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+.gate-card img{height:40px;margin-bottom:18px}
+.gate-card h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.3rem;margin-bottom:8px}
+.gate-card p{color:var(--muted);font-size:.9rem;margin-bottom:18px}
+.gate-card input{width:100%;padding:13px 16px;border:2px solid var(--line);border-radius:12px;font-size:1rem;text-align:center;background:var(--card);color:var(--ink)}
+.gate-card input:focus{outline:none;border-color:var(--azul)}
+.gate-card button{margin-top:14px;width:100%;padding:13px;border:none;border-radius:12px;background:var(--azul);color:#fff;font-family:'Plus Jakarta Sans';font-weight:700;font-size:1rem;cursor:pointer}
+.gate-err{color:var(--vermelho);font-size:.85rem;margin-top:10px;min-height:18px;font-weight:600}
+.acessobar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 16px;margin-top:-58px;position:relative;z-index:3;box-shadow:0 12px 30px rgba(20,24,60,.10)}
+.acessobar .ac{font-size:.85rem;font-weight:700;color:var(--azul)}
+.acessobar button{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.78rem;color:var(--azul);background:none;border:none;cursor:pointer}
+[data-theme="dark"] .acessobar .ac{color:#aeb4ff}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:16px;position:relative;z-index:2}
 .fact{background:var(--card);border-radius:16px;padding:16px 18px;box-shadow:0 12px 30px rgba(20,24,60,.10);border:1px solid var(--line)}
 .fact .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700}
 .fact .val{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.18rem;margin-top:5px}
 .fact .val.small{font-size:1rem}
 .fact.live .val{color:var(--verde-2)}
-
 section{margin-top:42px}
 h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.45rem;display:flex;align-items:center;gap:10px}
 h2 .bar{width:6px;height:24px;border-radius:6px;background:var(--azul)}
 .lead{color:var(--muted);margin-top:6px;margin-bottom:18px}
-
-/* GRID DE CARDS */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:18px}
 .lcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative}
 .lcard .marca{font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--azul);background:#eef0ff;padding:4px 10px;border-radius:999px;display:inline-block;width:fit-content}
 .lcard h3{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.02rem;line-height:1.3;padding-right:90px}
 .lcard .codigo{font-size:.78rem;color:var(--muted)}
 .lcard .badge-meta{position:absolute;top:18px;right:18px;background:var(--verde-2);color:#fff;font-family:'Plus Jakarta Sans';font-weight:800;font-size:.66rem;padding:5px 10px;border-radius:999px;letter-spacing:.4px;text-align:center;line-height:1.2}
-.lcard .chartwrap{margin-top:2px}
 .lcard .chartwrap svg{display:block;width:100%;height:90px}
 .lcard .meta-row{display:flex;justify-content:space-between;align-items:baseline;font-size:.85rem;color:var(--muted)}
 .lcard .meta-row b{font-family:'Plus Jakarta Sans';font-weight:800;color:var(--ink);font-size:1.15rem}
 .progress{height:10px;border-radius:999px;background:var(--line);overflow:hidden}
-.progress > div{height:100%;border-radius:999px;background:var(--azul)}
-.progress.done > div{background:var(--verde-2)}
+.progress>div{height:100%;border-radius:999px;background:var(--azul)}
+.progress.done>div{background:var(--verde-2)}
 .lcard .stats{display:flex;justify-content:space-between;align-items:center;font-size:.8rem;color:var(--muted)}
 .lcard .stats b{color:var(--ink);font-family:'Plus Jakarta Sans';font-weight:700}
 .lcard .verbtn{margin-top:6px;align-self:flex-start;font-family:'Plus Jakarta Sans';font-weight:700;font-size:.82rem;color:var(--azul);text-decoration:none;background:#eef0ff;padding:8px 14px;border-radius:999px}
 .lcard .verbtn:hover{background:#dde1ff}
-
 footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;text-align:center;border-top:1px solid var(--line)}
 .updated{display:inline-flex;align-items:center;gap:8px;background:#e9fbef;color:var(--verde-2);font-weight:700;padding:8px 16px;border-radius:999px;font-family:'Plus Jakarta Sans';font-size:.85rem}
 .updated .pulse{width:9px;height:9px;border-radius:50%;background:var(--verde);box-shadow:0 0 0 0 rgba(52,199,89,.6);animation:pulse 1.8s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,199,89,.6)}70%{box-shadow:0 0 0 10px rgba(52,199,89,0)}100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}}
-
-/* TEMA ESCURO */
-:root[data-theme="dark"]{
-  --bg:#0e1018; --card:#181b27; --ink:#eceef6; --muted:#9aa0bd; --line:#2a2f42; --verde-2:#34d36b;
-}
-[data-theme="dark"] .fact{box-shadow:0 12px 30px rgba(0,0,0,.45)}
+:root[data-theme="dark"]{--bg:#0e1018;--card:#181b27;--ink:#eceef6;--muted:#9aa0bd;--line:#2a2f42;--verde-2:#34d36b;}
+[data-theme="dark"] .fact,[data-theme="dark"] .acessobar{box-shadow:0 12px 30px rgba(0,0,0,.45)}
 [data-theme="dark"] .lcard .marca{background:#23283a;color:#aeb4ff}
 </style>
 </head>
 <body>
+
+<div class="gate" id="gate" style="display:none">
+  <div class="gate-card">
+    <img src="assets/ferretti-azul.png" alt="Ferretti" />
+    <h2>Acompanhamento de Lançamentos</h2>
+    <p>Acesso restrito. Informe sua senha — os dados aparecem filtrados pelo seu acesso.</p>
+    <input id="gatePass" type="password" placeholder="Senha" autocomplete="off" />
+    <button id="gateBtn" type="button">Entrar</button>
+    <div class="gate-err" id="gateErr"></div>
+  </div>
+</div>
+
 <header>
   <div class="wrap">
     <div class="topbar">
@@ -85,18 +92,24 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
       </div>
     </div>
     <h1 class="title">Acompanhamento de Lançamentos</h1>
-    <p class="subtitle">Positivação acumulada dos produtos de lançamento desde a 1ª venda — meta de 200 clientes distintos por produto.</p>
+    <p class="subtitle">Positivação dos produtos de lançamento — meta de 15 clientes por setor (vendedor).</p>
   </div>
 </header>
 
 <div class="wrap">
-  <div class="facts" id="facts"></div>
+  <div class="acessobar" id="acessoBar" style="display:none">
+    <span class="ac" id="acessoLabel"></span>
+    <button id="sairBtn" type="button">trocar acesso</button>
+  </div>
 
-  <section>
-    <h2><span class="bar"></span>Produtos de lançamento</h2>
-    <p class="lead">Cada gráfico mostra a evolução da quantidade de clientes distintos que já compraram o produto, desde o lançamento até hoje. A linha pontilhada marca a meta de 200 clientes.</p>
-    <div class="grid" id="cards"></div>
-  </section>
+  <div id="conteudo" style="display:none">
+    <div class="facts" id="facts"></div>
+    <section>
+      <h2><span class="bar"></span>Produtos de lançamento</h2>
+      <p class="lead" id="leadTxt"></p>
+      <div class="grid" id="cards"></div>
+    </section>
+  </div>
 </div>
 
 <footer>
@@ -107,57 +120,108 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
   </div>
 </footer>
 
+<script src="dados/acesso.js"></script>
 <script src="dados/lancamentos.js"></script>
 <script src="assets/charts.js"></script>
 <script>
-function fmtData(iso){ const p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function fmtData(iso){ const p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
 
 const L = window.LANCAMENTOS;
-const total = L.produtos.length;
-const atingiram = L.produtos.filter(p => p.clientesAtual >= p.meta).length;
+const ACESSOS = window.ACESSOS || [];
+const SETOR_REGIONAL = window.SETOR_REGIONAL || {};
+const META_SETOR = L.meta.metaPorSetor || 15;
+const TODOS_SETORES = Object.keys(SETOR_REGIONAL).length;
+// nº de meses global (índices em clientesSetor[].m)
+let NMESES = 1;
+L.produtos.forEach(p=>(p.clientesSetor||[]).forEach(c=>c.m.forEach(i=>{ if(i+1>NMESES) NMESES=i+1; })));
 
-document.getElementById('updatedTxt').textContent = 'Atualizado em ' + L.meta.atualizadoEm;
-document.getElementById('periodoTxt').textContent = 'Dados de ' + L.meta.periodoDados;
+document.getElementById('updatedTxt').textContent='Atualizado em '+L.meta.atualizadoEm;
+document.getElementById('periodoTxt').textContent='Dados de '+L.meta.periodoDados;
 
-document.getElementById('facts').innerHTML = [
-  ['Lançamentos acompanhados', total, ''],
-  ['Já atingiram a meta', atingiram + ' de ' + total, atingiram > 0 ? 'live' : ''],
-  ['Meta por lançamento', numFmt(L.meta.metaClientes) + ' clientes', ''],
-  ['Dados até', L.meta.atualizadoEm, 'small']
-].map(f => `<div class="fact ${f[2]==='live'?'live':''}"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
-
-// Ordem: do MENOS distribuído para o MAIS distribuído; em empate, por marca
-const ordenado = [...L.produtos].sort((a,b) => (a.clientesAtual - b.clientesAtual) || a.marca.localeCompare(b.marca));
-
-document.getElementById('cards').innerHTML = ordenado.map(p => {
-  const pct = Math.min(100, p.percentualMeta);
-  const done = p.clientesAtual >= p.meta;
-  const chart = progressLineSVG(p.serie.map(s => ({clientes: s.clientes})), p.meta);
-  return `<div class="lcard">
-    ${done ? '<div class="badge-meta">✓ Meta<br>atingida</div>' : ''}
-    <span class="marca">${p.marca}</span>
-    <h3>${p.descricao}</h3>
-    <div class="codigo">${p.codigo} · lançado em ${fmtData(p.lancamento)}</div>
-    <div class="chartwrap">${chart}</div>
-    <div class="meta-row"><span>Clientes positivados</span><b>${p.clientesAtual} / ${p.meta}</b></div>
-    <div class="progress ${done?'done':''}"><div style="width:${pct}%"></div></div>
-    <div class="stats"><span>Valor vendido: <b>${brl(p.valorTotal)}</b></span><span>${pct.toFixed(0)}%</span></div>
-    <a class="verbtn" href="produto.html?codigo=${encodeURIComponent(p.codigo)}">Ver detalhes do produto →</a>
-  </div>`;
-}).join('');
-
-// ===== Tema claro/escuro =====
-function setTheme(t){
-  document.documentElement.setAttribute('data-theme', t);
-  try{ localStorage.setItem('ferretti-theme', t); }catch(e){}
-  const b = document.getElementById('themeBtn');
-  if(b) b.textContent = (t==='dark' ? '☀️ Claro' : '🌙 Escuro');
+let ALLOWED=null, ACC=null;
+function computeAllowed(acc){
+  if(!acc||acc.escopo==='todos') return null;
+  const setores=Object.keys(SETOR_REGIONAL);
+  if(acc.escopo==='regional'){ const rv=norm(acc.valor); return new Set(setores.filter(s=>norm(SETOR_REGIONAL[s])===rv)); }
+  const sv=norm(acc.valor);
+  return new Set(setores.filter(s=>{ const ns=norm(s); return ns===sv||ns.startsWith(sv)||sv.startsWith(ns); }));
 }
-document.getElementById('themeBtn').addEventListener('click', function(){
-  const atual = document.documentElement.getAttribute('data-theme')==='dark' ? 'dark' : 'light';
-  setTheme(atual==='dark' ? 'light' : 'dark');
-});
-setTheme(document.documentElement.getAttribute('data-theme')==='dark' ? 'dark' : 'light');
+function nSetoresEscopo(){ return ALLOWED ? ALLOWED.size : TODOS_SETORES; }
+
+function scoped(p){
+  const cli=(p.clientesSetor||[]).filter(c=>!ALLOWED||ALLOWED.has(c.s));
+  const first={};
+  cli.forEach(c=>{ const mn=Math.min.apply(null,c.m); if(first[c.c]===undefined||mn<first[c.c]) first[c.c]=mn; });
+  const novos=new Array(NMESES).fill(0);
+  Object.keys(first).forEach(k=>{ novos[first[k]]++; });
+  let acc=0; const serie=[]; for(let i=0;i<NMESES;i++){ acc+=novos[i]; serie.push({clientes:acc}); }
+  return { clientesAtual:Object.keys(first).length, serie };
+}
+
+function renderConteudo(){
+  const meta = META_SETOR * nSetoresEscopo();
+  const dados = L.produtos.map(p=>{ const s=scoped(p); return {p, clientesAtual:s.clientesAtual, serie:s.serie, meta}; });
+  const atingiram = dados.filter(d=>d.clientesAtual>=d.meta).length;
+  const escopoTxt = ALLOWED ? (nSetoresEscopo()+' setor(es)') : (TODOS_SETORES+' setores');
+
+  document.getElementById('facts').innerHTML=[
+    ['Lançamentos acompanhados', L.produtos.length, ''],
+    ['Já atingiram a meta', atingiram+' de '+L.produtos.length, atingiram>0?'live':''],
+    ['Meta', numFmt(meta)+' clientes ('+META_SETOR+'/setor × '+nSetoresEscopo()+')', 'small'],
+    ['Dados até', L.meta.atualizadoEm, 'small']
+  ].map(f=>`<div class="fact ${f[2]==='live'?'live':''}"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
+
+  document.getElementById('leadTxt').textContent='Cada gráfico mostra a positivação acumulada de clientes distintos no seu acesso, do lançamento até hoje. A linha pontilhada marca a meta ('+META_SETOR+' por setor, '+escopoTxt+' = '+numFmt(meta)+').';
+
+  // ordem: do MENOS distribuído para o MAIS; empate por marca
+  dados.sort((a,b)=> (a.clientesAtual-b.clientesAtual) || a.p.marca.localeCompare(b.p.marca));
+
+  document.getElementById('cards').innerHTML=dados.map(d=>{
+    const p=d.p; const pct=d.meta>0?Math.min(100, d.clientesAtual/d.meta*100):0;
+    const done=d.clientesAtual>=d.meta;
+    const chart=progressLineSVG(d.serie.map(s=>({clientes:s.clientes})), d.meta);
+    return `<div class="lcard">
+      ${done?'<div class="badge-meta">✓ Meta<br>atingida</div>':''}
+      <span class="marca">${p.marca}</span>
+      <h3>${p.descricao}</h3>
+      <div class="codigo">${p.codigo} · lançado em ${fmtData(p.lancamento)}</div>
+      <div class="chartwrap">${chart}</div>
+      <div class="meta-row"><span>Clientes positivados</span><b>${d.clientesAtual} / ${d.meta}</b></div>
+      <div class="progress ${done?'done':''}"><div style="width:${pct}%"></div></div>
+      <div class="stats"><span>Positivação no seu acesso</span><span>${pct.toFixed(0)}%</span></div>
+      <a class="verbtn" href="produto.html?codigo=${encodeURIComponent(p.codigo)}">Ver detalhes do produto →</a>
+    </div>`;
+  }).join('');
+}
+
+function applyAcc(acc){ ACC=acc; ALLOWED=computeAllowed(acc);
+  document.getElementById('acessoBar').style.display='';
+  let extra=ALLOWED?(' · '+ALLOWED.size+' setor(es)'):'';
+  document.getElementById('acessoLabel').textContent='Acesso: '+acc.label+extra;
+  document.getElementById('conteudo').style.display='';
+  renderConteudo();
+}
+
+/* ===== Gate ===== */
+function isAuth(){ try{ return JSON.parse(sessionStorage.getItem('rel-acc')||'null'); }catch(e){ return null; } }
+async function sha256hex(s){ const b=new TextEncoder().encode((s||'').toLowerCase()); const h=await crypto.subtle.digest('SHA-256',b); return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+function showGate(){ document.getElementById('gate').style.display='flex'; document.getElementById('conteudo').style.display='none'; document.getElementById('acessoBar').style.display='none'; setTimeout(()=>document.getElementById('gatePass').focus(),50); }
+async function tentarSenha(){ const hex=await sha256hex(document.getElementById('gatePass').value.trim()); const acc=ACESSOS.find(a=>a.h===hex);
+  if(acc){ try{sessionStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){} document.getElementById('gate').style.display='none'; applyAcc(acc); }
+  else document.getElementById('gateErr').textContent='Senha incorreta.'; }
+document.getElementById('gateBtn').addEventListener('click',tentarSenha);
+document.getElementById('gatePass').addEventListener('keydown',e=>{ if(e.key==='Enter') tentarSenha(); });
+document.getElementById('sairBtn').addEventListener('click',()=>{ try{sessionStorage.removeItem('rel-acc');}catch(e){} location.reload(); });
+
+const saved=isAuth();
+if(saved){ document.getElementById('gate').style.display='none'; applyAcc(saved); }
+else showGate();
+
+/* ===== Tema ===== */
+function setTheme(t){ document.documentElement.setAttribute('data-theme',t); try{localStorage.setItem('ferretti-theme',t);}catch(e){} const b=document.getElementById('themeBtn'); if(b)b.textContent=(t==='dark'?'☀️ Claro':'🌙 Escuro'); }
+document.getElementById('themeBtn').addEventListener('click',function(){ const a=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light'; setTheme(a==='dark'?'light':'dark'); });
+setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light');
 </script>
 </body>
 </html>
