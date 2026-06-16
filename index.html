@@ -210,15 +210,15 @@ function applyAcc(acc){ ACC=acc; ALLOWED=computeAllowed(acc);
 }
 
 /* ===== Gate ===== */
-function isAuth(){ try{ return JSON.parse(sessionStorage.getItem('rel-acc')||'null'); }catch(e){ return null; } }
+function isAuth(){ try{ return JSON.parse(localStorage.getItem('rel-acc')||'null'); }catch(e){ return null; } }
 async function sha256hex(s){ const b=new TextEncoder().encode((s||'').toLowerCase()); const h=await crypto.subtle.digest('SHA-256',b); return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 function showGate(){ document.getElementById('gate').style.display='flex'; document.getElementById('conteudo').style.display='none'; document.getElementById('acessoBar').style.display='none'; setTimeout(()=>document.getElementById('gatePass').focus(),50); }
 async function tentarSenha(){ const hex=await sha256hex(document.getElementById('gatePass').value.trim()); const acc=ACESSOS.find(a=>a.h===hex);
-  if(acc){ try{sessionStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){} document.getElementById('gate').style.display='none'; applyAcc(acc); }
+  if(acc){ try{localStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){} document.getElementById('gate').style.display='none'; applyAcc(acc); }
   else document.getElementById('gateErr').textContent='Senha incorreta.'; }
 document.getElementById('gateBtn').addEventListener('click',tentarSenha);
 document.getElementById('gatePass').addEventListener('keydown',e=>{ if(e.key==='Enter') tentarSenha(); });
-document.getElementById('sairBtn').addEventListener('click',()=>{ try{sessionStorage.removeItem('rel-acc');}catch(e){} location.reload(); });
+document.getElementById('sairBtn').addEventListener('click',()=>{ try{localStorage.removeItem('rel-acc');}catch(e){} location.reload(); });
 
 const saved=isAuth();
 if(saved){ document.getElementById('gate').style.display='none'; applyAcc(saved); }
