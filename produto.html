@@ -301,7 +301,12 @@ function render(){
     const rows=CTX.prods.map(p=>{ const a=aggregate([p],i0,i1); return {codigo:p.codigo,descricao:p.descricao,clientes:a.dist,v:a.valor,q:a.qtd}; }).filter(r=>r.clientes>0).sort((a,b)=>b.clientes-a.clientes);
     renderProdutos(rows,CTX.produtosTitulo);
   } else renderProdutos(null);
-  renderSetores(CTX.setores);
+
+  const intersect = (CTX.mode==='selecao' && CTX.prods.length>1);
+  const hint = intersect ? ('clientes que compraram TODOS os '+CTX.prods.length+' selecionados · período completo')
+                         : 'período completo · clique para abrir';
+  const emptyMsg = intersect ? 'Nenhum cliente comprou todos os produtos selecionados.' : 'Sem clientes no seu acesso.';
+  renderSetores(buildSetores(CTX.prods, intersect), hint, emptyMsg);
 }
 
 function renderTabela(serie,distTotal,prev){
@@ -341,14 +346,30 @@ document.getElementById('produtosBody').addEventListener('click', e=>{
   const p=porCodigo[a.dataset.cod]; if(p){ showProduto(p); window.scrollTo({top:0,behavior:'smooth'}); }
 });
 
-function renderSetores(setores){
+// Monta os setores/clientes a partir de um CONJUNTO de produtos.
+// intersect=true (seleção 2+): só clientes que compraram TODOS os produtos.
+function buildSetores(prods, intersect){
+  const byCli={};
+  prods.forEach(p=>{ (p.setores||[]).forEach(s=>{
+    if(ALLOWED && !ALLOWED.has(s.nome)) return;
+    s.lista.forEach(c=>{ let o=byCli[c.cod]; if(!o){ o=byCli[c.cod]={setor:s.nome,nome:c.nome,v:0,q:0,np:0}; } o.v+=c.v; o.q+=c.q; o.np++; });
+  }); });
+  const n=prods.length, bySetor={};
+  Object.keys(byCli).forEach(cod=>{ const o=byCli[cod]; if(intersect && o.np<n) return;
+    let g=bySetor[o.setor]; if(!g){ g=bySetor[o.setor]={nome:o.setor,clientes:0,v:0,q:0,lista:[]}; }
+    g.clientes++; g.v+=o.v; g.q+=o.q; g.lista.push({cod,nome:o.nome,v:o.v,q:o.q});
+  });
+  const arr=Object.values(bySetor).sort((a,b)=>b.v-a.v);
+  arr.forEach(s=>s.lista.sort((a,b)=>b.v-a.v));
+  return arr;
+}
+function renderSetores(setores, hint, emptyMsg){
   const box=document.getElementById('setoresBox'), body=document.getElementById('setoresBody'), empty=document.getElementById('setoresEmpty');
-  if(!setores){ box.style.display='none'; return; }
-  const vis = ALLOWED ? setores.filter(s=>ALLOWED.has(s.nome)) : setores;
+  const dh=box.querySelector('summary .dhint'); if(dh) dh.textContent = hint || 'período completo · clique para abrir';
   box.style.display='';
-  if(!vis.length){ body.innerHTML=''; body.style.display='none'; empty.style.display=''; return; }
+  if(!setores.length){ body.innerHTML=''; body.style.display='none'; empty.style.display=''; empty.textContent = emptyMsg || 'Sem clientes no seu acesso.'; return; }
   body.style.display=''; empty.style.display='none';
-  body.innerHTML=vis.map(s=>`<details class="setor-item"><summary><span>${escapeHtml(s.nome)}</span><span class="setor-stats">${numFmt(s.clientes)} cliente(s) · ${numFmt(s.q)} un · ${brl(s.v)}</span></summary>
+  body.innerHTML=setores.map(s=>`<details class="setor-item"><summary><span>${escapeHtml(s.nome)}</span><span class="setor-stats">${numFmt(s.clientes)} cliente(s) · ${numFmt(s.q)} un · ${brl(s.v)}</span></summary>
     <div class="disclosure-body tbl-wrap"><table class="tbl"><thead><tr><th>Cliente</th><th>Código</th><th class="num">Quantidade</th><th class="num">Valor</th></tr></thead>
     <tbody>${s.lista.map(c=>`<tr><td>${escapeHtml(c.nome)}</td><td>${escapeHtml(c.cod)}</td><td class="num">${numFmt(c.q)}</td><td class="num">${brl(c.v)}</td></tr>`).join('')}</tbody></table></div></details>`).join('');
 }
