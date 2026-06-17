@@ -201,7 +201,9 @@ function renderConteudo(){
   }).join('');
 }
 
-function applyAcc(acc){ ACC=acc; ALLOWED=computeAllowed(acc);
+function applyAcc(acc){
+  if(acc && acc.escopo==='setor' && norm(acc.valor)==='contaschaves'){ location.href='contaschaves.html'; return; }
+  ACC=acc; ALLOWED=computeAllowed(acc);
   document.getElementById('acessoBar').style.display='';
   let extra=ALLOWED?(' · '+ALLOWED.size+' setor(es)'):'';
   document.getElementById('acessoLabel').textContent='Acesso: '+acc.label+extra;

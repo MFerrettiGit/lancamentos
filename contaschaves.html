@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Contas Chaves | Ferretti</title>
+<script>(function(){try{if(localStorage.getItem('ferretti-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--azul:#2B2FA8;--azul-2:#3a3fd0;--azul-dark:#1c1f78;--verde:#34c759;--verde-2:#28a745;--vermelho:#d33;--ouro:#f5b942;--laranja:#ff6b35;--bg:#f4f6fb;--card:#ffffff;--ink:#16182e;--muted:#6b6f8a;--line:#e7eaf3;}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+a{color:inherit}
+header{background:linear-gradient(135deg,var(--azul-dark),var(--azul) 55%,var(--azul-2));color:#fff;padding:30px 0 70px;position:relative;overflow:hidden}
+header::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border:40px solid rgba(255,255,255,.06);border-radius:50%}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand{height:38px}
+.topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.themebtn,.navbtn{display:inline-flex;align-items:center;gap:6px;font-family:'Plus Jakarta Sans';font-size:.85rem;font-weight:600;color:#fff;background:rgba(255,255,255,.14);border:none;text-decoration:none;padding:8px 14px;border-radius:999px;cursor:pointer}
+.themebtn:hover,.navbtn:hover{background:rgba(255,255,255,.26)}
+h1.title{font-family:'Plus Jakarta Sans';font-weight:800;font-size:clamp(1.8rem,5vw,2.8rem);margin-top:22px;line-height:1.05}
+.subtitle{color:#d4d7ff;font-size:1.02rem;margin-top:8px;max-width:720px}
+h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.35rem;display:flex;align-items:center;gap:10px}
+h2 .bar{width:6px;height:22px;border-radius:6px;background:var(--azul)}
+.gate{position:fixed;inset:0;background:linear-gradient(135deg,var(--azul-dark),var(--azul));display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.gate-card{background:var(--card);border-radius:20px;padding:34px 30px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+.gate-card img{height:40px;margin-bottom:18px}
+.gate-card h2{font-size:1.3rem;justify-content:center;margin-bottom:8px}
+.gate-card p{color:var(--muted);font-size:.9rem;margin-bottom:18px}
+.gate-card input{width:100%;padding:13px 16px;border:2px solid var(--line);border-radius:12px;font-size:1rem;text-align:center;background:var(--card);color:var(--ink)}
+.gate-card input:focus{outline:none;border-color:var(--azul)}
+.gate-card button{margin-top:14px;width:100%;padding:13px;border:none;border-radius:12px;background:var(--azul);color:#fff;font-family:'Plus Jakarta Sans';font-weight:700;font-size:1rem;cursor:pointer}
+.gate-err{color:var(--vermelho);font-size:.85rem;margin-top:10px;min-height:18px;font-weight:600}
+.acessobar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 16px;margin-top:-40px;position:relative;z-index:2;box-shadow:0 12px 30px rgba(20,24,60,.10)}
+.acessobar .ac{font-size:.85rem;font-weight:700;color:var(--azul)}
+.acessobar button{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.78rem;color:var(--azul);background:none;border:none;cursor:pointer}
+[data-theme="dark"] .acessobar .ac{color:#aeb4ff}
+section{margin-top:34px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:16px}
+.fact{background:var(--card);border-radius:16px;padding:15px 18px;box-shadow:0 8px 20px rgba(20,24,60,.06);border:1px solid var(--line)}
+.fact .lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700}
+.fact .val{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.15rem;margin-top:5px}
+.fact .val.small{font-size:.98rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:18px}
+.card h3{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.05rem;margin-bottom:4px}
+.card p.hint{color:var(--muted);font-size:.86rem;margin-bottom:12px}
+.card svg{display:block;width:100%;height:280px}
+.selrede{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.selrede select{padding:12px 14px;border:2px solid var(--line);border-radius:12px;font-size:1rem;font-family:'DM Sans';background:var(--card);color:var(--ink);min-width:280px}
+.tbl{width:100%;border-collapse:collapse;font-size:.9rem}
+.tbl th,.tbl td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line)}
+.tbl th{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl-wrap{overflow-x:auto}
+.tbl a{color:var(--azul);font-weight:600;text-decoration:none}
+.pill{display:inline-block;font-size:.66rem;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:.4px}
+.pill.A{background:#ffe3e3;color:#c0392b}.pill.B{background:#fff3d6;color:#a5740a}.pill.C{background:#eef0ff;color:#5b5fb0}
+[data-theme="dark"] .pill.A{background:#3a2326;color:#ff9a9a}[data-theme="dark"] .pill.B{background:#3a3320;color:#f5c97a}[data-theme="dark"] .pill.C{background:#23283a;color:#aeb4ff}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;padding:6px 12px;border-radius:999px}
+.chip.on{background:#e9fbef;color:var(--verde-2)}
+.chip.off{background:var(--bg);color:var(--muted);border:1px dashed var(--line)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+details.disc{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 22px;margin-top:18px}
+details.disc>summary{cursor:pointer;list-style:none;font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.02rem;display:flex;justify-content:space-between}
+details.disc>summary::-webkit-details-marker{display:none}
+details.disc>summary::after{content:'+';color:var(--azul);font-size:1.3rem;font-weight:700}
+details.disc[open]>summary::after{content:'\2212'}
+footer{margin-top:48px;padding:28px 0 44px;color:var(--muted);font-size:.84rem;text-align:center;border-top:1px solid var(--line)}
+.warn{color:var(--vermelho);font-weight:700}
+:root[data-theme="dark"]{--bg:#0e1018;--card:#181b27;--ink:#eceef6;--muted:#9aa0bd;--line:#2a2f42;--verde-2:#34d36b;}
+[data-theme="dark"] .fact,[data-theme="dark"] .card,[data-theme="dark"] .acessobar{box-shadow:0 12px 30px rgba(0,0,0,.45)}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate" style="display:none">
+  <div class="gate-card">
+    <img src="assets/ferretti-azul.png" alt="Ferretti" />
+    <h2>Contas Chaves</h2>
+    <p id="gateMsg">Relatório exclusivo de Contas Chaves. Informe sua senha.</p>
+    <input id="gatePass" type="password" placeholder="Senha" autocomplete="off" />
+    <button id="gateBtn" type="button">Entrar</button>
+    <div class="gate-err" id="gateErr"></div>
+    <a class="gate-back" href="index.html" style="display:block;margin-top:14px;font-size:.82rem;color:var(--muted);text-decoration:none">← Lançamentos</a>
+  </div>
+</div>
+
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <img class="brand" src="assets/ferretti-branco.png" alt="Ferretti distribuidora" />
+      <div class="topbar-actions">
+        <button id="themeBtn" class="themebtn" type="button"></button>
+      </div>
+    </div>
+    <h1 class="title">Contas Chaves</h1>
+    <p class="subtitle">Desempenho das redes que você atende — volume e valor mês a mês, adesão aos lançamentos, oportunidades (curva A/B não compradas) e o que parou de vender.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="acessobar" id="acessoBar" style="display:none">
+    <span class="ac" id="acessoLabel"></span>
+    <button id="sairBtn" type="button">trocar acesso</button>
+  </div>
+
+  <div id="conteudo" style="display:none">
+    <div class="facts" id="resumo"></div>
+
+    <section>
+      <h2><span class="bar"></span>Visão geral das redes</h2>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>Rede</th><th class="num">Lojas</th><th class="num">Valor</th><th class="num">Volume</th><th class="num">Lançamentos</th><th class="num">Curva A</th><th class="num">Meses ativos</th></tr></thead>
+            <tbody id="overviewBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="bar"></span>Detalhe da rede</h2>
+      <div class="selrede">
+        <span style="font-weight:700;color:var(--muted);font-size:.85rem">Rede</span>
+        <select id="redeSelect"></select>
+      </div>
+      <div id="redeDetalhe"></div>
+    </section>
+  </div>
+</div>
+
+<footer><div class="wrap"><p id="periodoTxt"></p><p style="margin-top:8px">Ferretti distribuidora · Contas Chaves · Uso interno</p></div></footer>
+
+<script src="dados/acesso.js"></script>
+<script src="dados/contaschaves.js"></script>
+<script src="assets/charts.js"></script>
+<script>
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
+
+const CC = window.CONTAS_CHAVES || {redes:[],curvaAB:[],meta:{meses:[],lancamentos:[]}};
+const ACESSOS = window.ACESSOS || [];
+const MESES = CC.meta.meses || [];
+const LANC = CC.meta.lancamentos || [];
+const ULT2 = MESES.length>=2 ? MESES[MESES.length-2] : (MESES[MESES.length-1]||'');
+document.getElementById('periodoTxt').textContent = 'Dados de ' + (CC.meta.periodoDados||'') + ' · atualizado em ' + (CC.meta.atualizadoEm||'');
+
+function mesesAtivos(r){ return r.serieMensal.filter(m=>m.v>0).length; }
+function lancAderidos(r){ return r.produtos.filter(p=>p.lanc).length; }
+function curvaAComprados(r){ const setA=new Set(CC.curvaAB.filter(x=>x.curva==='A').map(x=>x.c)); return r.produtos.filter(p=>setA.has(p.c)).length; }
+const totalCurvaA = CC.curvaAB.filter(x=>x.curva==='A').length;
+
+/* ===== Resumo ===== */
+function renderResumo(){
+  const vTot=CC.redes.reduce((a,r)=>a+r.valorTotal,0);
+  const qTot=CC.redes.reduce((a,r)=>a+r.qtdTotal,0);
+  const lojas=CC.redes.reduce((a,r)=>a+r.lojas,0);
+  document.getElementById('resumo').innerHTML=[
+    ['Redes atendidas', CC.redes.length, ''],
+    ['Lojas no total', lojas, ''],
+    ['Valor no período', brl(vTot), ''],
+    ['Volume no período', numFmt(qTot)+' un', 'small'],
+    ['Lançamentos no portfólio', LANC.length, 'small']
+  ].map(f=>`<div class="fact"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
+}
+
+/* ===== Visão geral ===== */
+function renderOverview(){
+  const rows=CC.redes.map((r,i)=>`<tr>
+    <td><a href="#" class="goRede" data-i="${i}">${escapeHtml(r.nome)}</a></td>
+    <td class="num">${r.lojas}</td>
+    <td class="num">${brl(r.valorTotal)}</td>
+    <td class="num">${numFmt(r.qtdTotal)}</td>
+    <td class="num">${lancAderidos(r)}/${LANC.length}</td>
+    <td class="num">${curvaAComprados(r)}/${totalCurvaA}</td>
+    <td class="num">${mesesAtivos(r)}/${MESES.length}</td>
+  </tr>`).join('');
+  document.getElementById('overviewBody').innerHTML=rows;
+  document.querySelectorAll('.goRede').forEach(a=>a.addEventListener('click',e=>{ e.preventDefault(); const i=+a.dataset.i; document.getElementById('redeSelect').value=i; renderRede(i); document.getElementById('redeDetalhe').scrollIntoView({behavior:'smooth'}); }));
+}
+
+/* ===== Detalhe da rede ===== */
+function renderRede(i){
+  const r=CC.redes[i]; if(!r){ document.getElementById('redeDetalhe').innerHTML=''; return; }
+  const ativos=mesesAtivos(r);
+  const ultV = r.serieMensal.filter(m=>m.v>0).slice(-1)[0];
+  const ultMes = [...r.serieMensal].reverse().find(m=>m.v>0);
+  const ticket = ativos>0 ? r.valorTotal/ativos : 0;
+  // lançamentos
+  const compradosLanc=new Set(r.produtos.filter(p=>p.lanc).map(p=>p.c));
+  const lancChips=LANC.map(c=>{ const on=compradosLanc.has(c); const prod=r.produtos.find(p=>p.c===c); const nome=prod?prod.d:c; return `<span class="chip ${on?'on':'off'}">${on?'✓':'·'} ${escapeHtml(nome)}</span>`; }).join('');
+  // oportunidades: curva A/B que a rede NAO compra
+  const comprados=new Set(r.produtos.map(p=>p.c));
+  const oport=CC.curvaAB.filter(x=>!comprados.has(x.c)).slice(0,15);
+  const oportRows=oport.map(x=>`<tr><td>${escapeHtml(x.d)}</td><td>${escapeHtml(x.mk)}</td><td><span class="pill ${x.curva}">${x.curva}</span></td><td class="num">${brl(x.v)}</td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--muted)">A rede compra todos os produtos curva A/B. 👏</td></tr>';
+  // parou de comprar: comprava (curva A/B) e nao compra ha 2+ meses
+  const parou=r.produtos.filter(p=>p.curva!=='C' && p.pmax && p.pmax < ULT2).sort((a,b)=>b.v-a.v);
+  const parouRows=parou.map(p=>`<tr><td>${escapeHtml(p.d)}</td><td>${escapeHtml(p.mk)}</td><td><span class="pill ${p.curva}">${p.curva}</span></td><td>${mesLabel(p.pmax)}</td><td class="num">${brl(p.v)}</td></tr>`).join('') || '<tr><td colspan="5" style="color:var(--muted)">Nenhum produto curva A/B parou de ser comprado. 👍</td></tr>';
+  // todos os produtos
+  const prodRows=r.produtos.map(p=>`<tr><td>${escapeHtml(p.d)}</td><td>${escapeHtml(p.mk)}</td><td><span class="pill ${p.curva}">${p.curva}</span></td><td>${p.lanc?'<span class="pill A" style="background:#e9fbef;color:#1d7a35">LANÇ.</span>':''}</td><td>${mesLabel(p.pmin)}–${mesLabel(p.pmax)}</td><td class="num">${numFmt(p.q)}</td><td class="num">${brl(p.v)}</td></tr>`).join('');
+
+  document.getElementById('redeDetalhe').innerHTML=`
+    <div class="facts" style="margin-top:14px">
+      <div class="fact"><div class="lbl">Valor no período</div><div class="val">${brl(r.valorTotal)}</div></div>
+      <div class="fact"><div class="lbl">Volume</div><div class="val small">${numFmt(r.qtdTotal)} un</div></div>
+      <div class="fact"><div class="lbl">Lojas</div><div class="val small">${r.lojas}</div></div>
+      <div class="fact"><div class="lbl">Lançamentos aderidos</div><div class="val small">${lancAderidos(r)} de ${LANC.length}</div></div>
+      <div class="fact"><div class="lbl">Curva A cobertos</div><div class="val small">${curvaAComprados(r)} de ${totalCurvaA}</div></div>
+      <div class="fact"><div class="lbl">Meses com compra</div><div class="val small">${ativos} de ${MESES.length}${ultMes?' · últ. '+mesLabel(ultMes.m):''}</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Desempenho mês a mês</h3>
+      <p class="hint">Como a rede vem comprando ao longo do período — valor e volume.</p>
+      <div>${valVolChartSVG(r.serieMensal)}</div>
+    </div>
+
+    <div class="card">
+      <h3>Adesão aos lançamentos (${lancAderidos(r)}/${LANC.length})</h3>
+      <p class="hint">Verde = a rede já comprou o lançamento. Cinza = ainda não aderiu (oportunidade de introdução).</p>
+      <div class="chips">${lancChips}</div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>🎯 Oportunidades — curva A/B que a rede NÃO compra</h3>
+        <p class="hint">Produtos importantes (alto valor na empresa) que esta rede ainda não compra.</p>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Produto</th><th>Marca</th><th>Curva</th><th class="num">Valor (empresa)</th></tr></thead><tbody>${oportRows}</tbody></table></div>
+      </div>
+      <div class="card">
+        <h3>⚠️ Parou de comprar (curva A/B)</h3>
+        <p class="hint">Produtos relevantes que a rede comprava e não compra há 2+ meses.</p>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Produto</th><th>Marca</th><th>Curva</th><th>Última compra</th><th class="num">Valor</th></tr></thead><tbody>${parouRows}</tbody></table></div>
+      </div>
+    </div>
+
+    <details class="disc">
+      <summary><span>Todos os produtos da rede (${r.produtos.length})</span><span></span></summary>
+      <div class="tbl-wrap" style="margin-top:14px"><table class="tbl"><thead><tr><th>Produto</th><th>Marca</th><th>Curva</th><th></th><th>Período</th><th class="num">Volume</th><th class="num">Valor</th></tr></thead><tbody>${prodRows}</tbody></table></div>
+    </details>`;
+}
+
+/* ===== Init / render ===== */
+function montarSelect(){
+  const sel=document.getElementById('redeSelect');
+  sel.innerHTML=CC.redes.map((r,i)=>`<option value="${i}">${escapeHtml(r.nome)} (${r.lojas} loja${r.lojas>1?'s':''})</option>`).join('');
+  sel.addEventListener('change',()=>renderRede(+sel.value));
+}
+function start(){
+  document.getElementById('conteudo').style.display='';
+  renderResumo(); renderOverview(); montarSelect();
+  if(CC.redes.length) renderRede(0);
+}
+
+/* ===== Acesso ===== */
+function podeVer(acc){ if(!acc) return false; if(acc.escopo==='todos') return true; return acc.escopo==='setor' && norm(acc.valor)==='contaschaves'; }
+function savedAcc(){ try{ return JSON.parse(localStorage.getItem('rel-acc')||'null'); }catch(e){ return null; } }
+async function sha256hex(s){ const b=new TextEncoder().encode((s||'').toLowerCase()); const h=await crypto.subtle.digest('SHA-256',b); return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+function applyAcc(acc){
+  document.getElementById('acessoBar').style.display='';
+  document.getElementById('acessoLabel').textContent='Acesso: '+acc.label;
+  document.getElementById('gate').style.display='none';
+  start();
+}
+function showGate(msg){ document.getElementById('gate').style.display='flex'; document.getElementById('conteudo').style.display='none'; document.getElementById('acessoBar').style.display='none'; if(msg) document.getElementById('gateErr').textContent=msg; setTimeout(()=>document.getElementById('gatePass').focus(),50); }
+async function tentar(){ const hex=await sha256hex(document.getElementById('gatePass').value.trim()); const acc=ACESSOS.find(a=>a.h===hex);
+  if(acc && podeVer(acc)){ try{localStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){} applyAcc(acc); }
+  else if(acc){ document.getElementById('gateErr').textContent='Este relatório é exclusivo de Contas Chaves.'; }
+  else { document.getElementById('gateErr').textContent='Senha incorreta.'; } }
+document.getElementById('gateBtn').addEventListener('click',tentar);
+document.getElementById('gatePass').addEventListener('keydown',e=>{ if(e.key==='Enter') tentar(); });
+document.getElementById('sairBtn').addEventListener('click',()=>{ try{localStorage.removeItem('rel-acc');}catch(e){} location.href='index.html'; });
+
+const sv=savedAcc();
+if(podeVer(sv)) applyAcc(sv); else showGate();
+
+/* ===== Tema ===== */
+function setTheme(t){ document.documentElement.setAttribute('data-theme',t); try{localStorage.setItem('ferretti-theme',t);}catch(e){} const b=document.getElementById('themeBtn'); if(b)b.textContent=(t==='dark'?'☀️ Claro':'🌙 Escuro'); }
+document.getElementById('themeBtn').addEventListener('click',function(){ const a=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light'; setTheme(a==='dark'?'light':'dark'); });
+setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light');
+</script>
+</body>
+</html>

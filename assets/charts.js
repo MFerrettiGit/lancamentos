@@ -108,6 +108,34 @@ function comboChartSVG2(serie, opts) {
   </svg>`;
 }
 
+// Valor (barras) + Volume/unidades (linha) por mes - relatorio Contas Chaves
+function valVolChartSVG(serie, opts) {
+  opts = opts || {};
+  const w = opts.width || 760, h = opts.height || 280;
+  const padL = 46, padR = 46, padT = 28, padB = 40;
+  const innerW = w - padL - padR, innerH = h - padT - padB;
+  if (!serie.length) return '<p style="color:var(--muted)">Sem dados.</p>';
+  const maxV = Math.max(...serie.map(m => m.v), 1);
+  const maxQ = Math.max(...serie.map(m => m.q), 1);
+  const n = serie.length, slot = innerW / n, barW = Math.min(slot * 0.5, 30);
+  const yV = v => padT + innerH - (v / maxV) * innerH;
+  const yQ = q => padT + innerH - (q / maxQ) * innerH;
+  const cx = i => padL + i * slot + slot / 2;
+  let bars = '', vlbl = '', xlbl = ''; const showLbl = n <= 18;
+  serie.forEach((m, i) => {
+    const x = cx(i) - barW / 2, y = yV(m.v), bh = (padT + innerH) - y;
+    bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="#2B2FA8" opacity="0.82"><title>${mesLabel(m.m)}: ${brl(m.v)} · ${numFmt(m.q)} un</title></rect>`;
+    if (showLbl && m.v > 0) vlbl += `<text x="${cx(i).toFixed(1)}" y="${(y - 4).toFixed(1)}" font-size="9" font-weight="700" fill="#2B2FA8" text-anchor="middle" font-family="DM Sans">${brlShort(m.v)}</text>`;
+    xlbl += `<text x="${cx(i).toFixed(1)}" y="${h - 14}" font-size="10" fill="#6b6f8a" text-anchor="middle" font-family="DM Sans">${mesLabel(m.m)}</text>`;
+  });
+  const pts = serie.map((m, i) => [cx(i), yQ(m.q)]);
+  const path = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const dots = pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="#28a745"><title>${mesLabel(serie[i].m)}: ${numFmt(serie[i].q)} un</title></circle>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" class="combo">${bars}${vlbl}
+    <path d="${path}" fill="none" stroke="#28a745" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}${xlbl}
+    <g font-family="DM Sans" font-size="10" fill="#6b6f8a"><text x="${padL}" y="16">valor (barras azul) · volume/unidades (linha verde)</text></g></svg>`;
+}
+
 // Barras de CLIENTES por mes (usado quando o valor mensal nao se aplica - visao por setor)
 function clientsBarsSVG(serie, opts) {
   opts = opts || {};

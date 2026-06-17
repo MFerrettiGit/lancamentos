@@ -233,6 +233,7 @@ function computeAllowed(acc){
   return new Set(setores.filter(s=>{ const ns=norm(s); return ns===sv || ns.startsWith(sv) || sv.startsWith(ns); }));
 }
 function applyAcc(acc){
+  if(acc && acc.escopo==='setor' && norm(acc.valor)==='contaschaves'){ location.href='contaschaves.html'; return; }
   ACC=acc; ALLOWED=computeAllowed(acc);
   document.getElementById('acessoBar').style.display='';
   let extra = ALLOWED ? (' · ' + ALLOWED.size + ' setor(es)') : '';
