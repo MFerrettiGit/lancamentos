@@ -36,7 +36,11 @@ h2 .bar{width:6px;height:22px;border-radius:6px;background:var(--azul)}
 .acessobar .ac{font-size:.85rem;font-weight:700;color:var(--azul)}
 .acessobar button{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.78rem;color:var(--azul);background:none;border:none;cursor:pointer}
 [data-theme="dark"] .acessobar .ac{color:#aeb4ff}
-section{margin-top:34px}
+section{margin-top:30px}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-top:18px}
+.ctl{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:600;color:var(--muted)}
+.ctl select{padding:7px 10px;border:2px solid var(--line);border-radius:9px;font-family:'DM Sans';font-size:.85rem;background:var(--card);color:var(--ink)}
+.linkbtn{font-family:'Plus Jakarta Sans';font-weight:700;font-size:.82rem;color:var(--azul);background:none;border:none;cursor:pointer;padding:0}
 .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:16px}
 .fact{background:var(--card);border-radius:16px;padding:15px 18px;box-shadow:0 8px 20px rgba(20,24,60,.06);border:1px solid var(--line)}
 .fact .lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700}
@@ -70,7 +74,6 @@ details.disc>summary::-webkit-details-marker{display:none}
 details.disc>summary::after{content:'+';color:var(--azul);font-size:1.3rem;font-weight:700}
 details.disc[open]>summary::after{content:'\2212'}
 footer{margin-top:48px;padding:28px 0 44px;color:var(--muted);font-size:.84rem;text-align:center;border-top:1px solid var(--line)}
-.warn{color:var(--vermelho);font-weight:700}
 :root[data-theme="dark"]{--bg:#0e1018;--card:#181b27;--ink:#eceef6;--muted:#9aa0bd;--line:#2a2f42;--verde-2:#34d36b;}
 [data-theme="dark"] .fact,[data-theme="dark"] .card,[data-theme="dark"] .acessobar{box-shadow:0 12px 30px rgba(0,0,0,.45)}
 </style>
@@ -109,6 +112,14 @@ footer{margin-top:48px;padding:28px 0 44px;color:var(--muted);font-size:.84rem;t
   </div>
 
   <div id="conteudo" style="display:none">
+    <div class="controls" id="periodo">
+      <span style="font-weight:700;color:var(--muted);font-size:.85rem">Período</span>
+      <div class="ctl"><span>De</span><select id="perDe"></select></div>
+      <div class="ctl"><span>Até</span><select id="perAte"></select></div>
+      <button class="linkbtn" id="perReset" type="button">período todo</button>
+      <span class="linkbtn" id="perInfo" style="margin-left:auto;color:var(--muted);cursor:default"></span>
+    </div>
+
     <div class="facts" id="resumo"></div>
 
     <section>
@@ -147,19 +158,30 @@ const CC = window.CONTAS_CHAVES || {redes:[],curvaAB:[],meta:{meses:[],lancament
 const ACESSOS = window.ACESSOS || [];
 const MESES = CC.meta.meses || [];
 const LANC = CC.meta.lancamentos || [];
-const ULT2 = MESES.length>=2 ? MESES[MESES.length-2] : (MESES[MESES.length-1]||'');
+const SET_A = new Set(CC.curvaAB.filter(x=>x.curva==='A').map(x=>x.c));
+const totalCurvaA = CC.curvaAB.filter(x=>x.curva==='A').length;
 document.getElementById('periodoTxt').textContent = 'Dados de ' + (CC.meta.periodoDados||'') + ' · atualizado em ' + (CC.meta.atualizadoEm||'');
 
-function mesesAtivos(r){ return r.serieMensal.filter(m=>m.v>0).length; }
-function lancAderidos(r){ return r.produtos.filter(p=>p.lanc).length; }
-function curvaAComprados(r){ const setA=new Set(CC.curvaAB.filter(x=>x.curva==='A').map(x=>x.c)); return r.produtos.filter(p=>setA.has(p.c)).length; }
-const totalCurvaA = CC.curvaAB.filter(x=>x.curva==='A').length;
+let RANGE=[0, Math.max(0, MESES.length-1)];
+function getRange(){ let a=+document.getElementById('perDe').value, b=+document.getElementById('perAte').value; if(a>b){const t=a;a=b;b=t;} return [a,b]; }
 
-/* ===== Resumo ===== */
-function renderResumo(){
-  const vTot=CC.redes.reduce((a,r)=>a+r.valorTotal,0);
-  const qTot=CC.redes.reduce((a,r)=>a+r.qtdTotal,0);
-  const lojas=CC.redes.reduce((a,r)=>a+r.lojas,0);
+// view da rede limitada ao período selecionado
+function viewOf(r){
+  const [i0,i1]=RANGE;
+  const produtos=r.produtos.map(p=>{ let v=0,q=0,pmin=null,pmax=null;
+    p.serie.forEach(s=>{ const idx=MESES.indexOf(s.m); if(idx>=i0&&idx<=i1){ v+=s.v; q+=s.q; if(pmin===null)pmin=s.m; pmax=s.m; } });
+    return {c:p.c,d:p.d,mk:p.mk,curva:p.curva,lanc:p.lanc,v,q,pmin,pmax,bought:(v>0||q>0)};
+  }).filter(p=>p.bought).sort((a,b)=>b.v-a.v);
+  const serieMensal=r.serieMensal.slice(i0,i1+1);
+  return {raiz:r.raiz,nome:r.nome,lojas:r.lojas,produtos,serieMensal,
+          valorTotal:produtos.reduce((a,p)=>a+p.v,0), qtdTotal:produtos.reduce((a,p)=>a+p.q,0)};
+}
+function mesesAtivos(v){ return v.serieMensal.filter(m=>m.v>0).length; }
+function lancAderidos(v){ return v.produtos.filter(p=>p.lanc).length; }
+function curvaAComprados(v){ return v.produtos.filter(p=>SET_A.has(p.c)).length; }
+
+function renderResumo(views){
+  const vTot=views.reduce((a,v)=>a+v.valorTotal,0), qTot=views.reduce((a,v)=>a+v.qtdTotal,0), lojas=CC.redes.reduce((a,r)=>a+r.lojas,0);
   document.getElementById('resumo').innerHTML=[
     ['Redes atendidas', CC.redes.length, ''],
     ['Lojas no total', lojas, ''],
@@ -168,93 +190,88 @@ function renderResumo(){
     ['Lançamentos no portfólio', LANC.length, 'small']
   ].map(f=>`<div class="fact"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
 }
-
-/* ===== Visão geral ===== */
-function renderOverview(){
-  const rows=CC.redes.map((r,i)=>`<tr>
-    <td><a href="#" class="goRede" data-i="${i}">${escapeHtml(r.nome)}</a></td>
-    <td class="num">${r.lojas}</td>
-    <td class="num">${brl(r.valorTotal)}</td>
-    <td class="num">${numFmt(r.qtdTotal)}</td>
-    <td class="num">${lancAderidos(r)}/${LANC.length}</td>
-    <td class="num">${curvaAComprados(r)}/${totalCurvaA}</td>
-    <td class="num">${mesesAtivos(r)}/${MESES.length}</td>
-  </tr>`).join('');
-  document.getElementById('overviewBody').innerHTML=rows;
+function renderOverview(views){
+  const nMeses=RANGE[1]-RANGE[0]+1;
+  document.getElementById('overviewBody').innerHTML=views.map((v,i)=>`<tr>
+    <td><a href="#" class="goRede" data-i="${i}">${escapeHtml(v.nome)}</a></td>
+    <td class="num">${v.lojas}</td><td class="num">${brl(v.valorTotal)}</td><td class="num">${numFmt(v.qtdTotal)}</td>
+    <td class="num">${lancAderidos(v)}/${LANC.length}</td><td class="num">${curvaAComprados(v)}/${totalCurvaA}</td>
+    <td class="num">${mesesAtivos(v)}/${nMeses}</td></tr>`).join('');
   document.querySelectorAll('.goRede').forEach(a=>a.addEventListener('click',e=>{ e.preventDefault(); const i=+a.dataset.i; document.getElementById('redeSelect').value=i; renderRede(i); document.getElementById('redeDetalhe').scrollIntoView({behavior:'smooth'}); }));
 }
-
-/* ===== Detalhe da rede ===== */
 function renderRede(i){
   const r=CC.redes[i]; if(!r){ document.getElementById('redeDetalhe').innerHTML=''; return; }
-  const ativos=mesesAtivos(r);
-  const ultV = r.serieMensal.filter(m=>m.v>0).slice(-1)[0];
-  const ultMes = [...r.serieMensal].reverse().find(m=>m.v>0);
-  const ticket = ativos>0 ? r.valorTotal/ativos : 0;
-  // lançamentos
-  const compradosLanc=new Set(r.produtos.filter(p=>p.lanc).map(p=>p.c));
-  const lancChips=LANC.map(c=>{ const on=compradosLanc.has(c); const prod=r.produtos.find(p=>p.c===c); const nome=prod?prod.d:c; return `<span class="chip ${on?'on':'off'}">${on?'✓':'·'} ${escapeHtml(nome)}</span>`; }).join('');
-  // oportunidades: curva A/B que a rede NAO compra
-  const comprados=new Set(r.produtos.map(p=>p.c));
+  const v=viewOf(r); const [i0,i1]=RANGE; const nMeses=i1-i0+1;
+  const ativos=mesesAtivos(v);
+  const ultMes=[...v.serieMensal].reverse().find(m=>m.v>0);
+  const ULT2 = i1>i0 ? MESES[i1-1] : MESES[i1];
+  const compradosLanc=new Set(v.produtos.filter(p=>p.lanc).map(p=>p.c));
+  const lancChips=LANC.map(c=>{ const on=compradosLanc.has(c); const prod=v.produtos.find(p=>p.c===c)||r.produtos.find(p=>p.c===c); const nome=prod?prod.d:c; return `<span class="chip ${on?'on':'off'}">${on?'✓':'·'} ${escapeHtml(nome)}</span>`; }).join('');
+  const comprados=new Set(v.produtos.map(p=>p.c));
   const oport=CC.curvaAB.filter(x=>!comprados.has(x.c)).slice(0,15);
   const oportRows=oport.map(x=>`<tr><td>${escapeHtml(x.d)}</td><td>${escapeHtml(x.mk)}</td><td><span class="pill ${x.curva}">${x.curva}</span></td><td class="num">${brl(x.v)}</td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--muted)">A rede compra todos os produtos curva A/B. 👏</td></tr>';
-  // parou de comprar: comprava (curva A/B) e nao compra ha 2+ meses
-  const parou=r.produtos.filter(p=>p.curva!=='C' && p.pmax && p.pmax < ULT2).sort((a,b)=>b.v-a.v);
-  const parouRows=parou.map(p=>`<tr><td>${escapeHtml(p.d)}</td><td>${escapeHtml(p.mk)}</td><td><span class="pill ${p.curva}">${p.curva}</span></td><td>${mesLabel(p.pmax)}</td><td class="num">${brl(p.v)}</td></tr>`).join('') || '<tr><td colspan="5" style="color:var(--muted)">Nenhum produto curva A/B parou de ser comprado. 👍</td></tr>';
-  // todos os produtos
-  const prodRows=r.produtos.map(p=>`<tr><td>${escapeHtml(p.d)}</td><td>${escapeHtml(p.mk)}</td><td><span class="pill ${p.curva}">${p.curva}</span></td><td>${p.lanc?'<span class="pill A" style="background:#e9fbef;color:#1d7a35">LANÇ.</span>':''}</td><td>${mesLabel(p.pmin)}–${mesLabel(p.pmax)}</td><td class="num">${numFmt(p.q)}</td><td class="num">${brl(p.v)}</td></tr>`).join('');
+  const parou=v.produtos.filter(p=>p.curva!=='C' && p.pmax && p.pmax < ULT2).sort((a,b)=>b.v-a.v);
+  const parouRows=parou.map(p=>`<tr><td>${escapeHtml(p.d)}</td><td>${escapeHtml(p.mk)}</td><td><span class="pill ${p.curva}">${p.curva}</span></td><td>${mesLabel(p.pmax)}</td><td class="num">${brl(p.v)}</td></tr>`).join('') || '<tr><td colspan="5" style="color:var(--muted)">Nenhum produto curva A/B parou de ser comprado no período. 👍</td></tr>';
+  const prodRows=v.produtos.map(p=>`<tr><td>${escapeHtml(p.d)}</td><td>${escapeHtml(p.mk)}</td><td><span class="pill ${p.curva}">${p.curva}</span></td><td>${p.lanc?'<span class="pill" style="background:#e9fbef;color:#1d7a35">LANÇ.</span>':''}</td><td>${p.pmin?mesLabel(p.pmin):''}–${p.pmax?mesLabel(p.pmax):''}</td><td class="num">${numFmt(p.q)}</td><td class="num">${brl(p.v)}</td></tr>`).join('') || '<tr><td colspan="7" style="color:var(--muted)">Sem compras no período.</td></tr>';
 
   document.getElementById('redeDetalhe').innerHTML=`
     <div class="facts" style="margin-top:14px">
-      <div class="fact"><div class="lbl">Valor no período</div><div class="val">${brl(r.valorTotal)}</div></div>
-      <div class="fact"><div class="lbl">Volume</div><div class="val small">${numFmt(r.qtdTotal)} un</div></div>
-      <div class="fact"><div class="lbl">Lojas</div><div class="val small">${r.lojas}</div></div>
-      <div class="fact"><div class="lbl">Lançamentos aderidos</div><div class="val small">${lancAderidos(r)} de ${LANC.length}</div></div>
-      <div class="fact"><div class="lbl">Curva A cobertos</div><div class="val small">${curvaAComprados(r)} de ${totalCurvaA}</div></div>
-      <div class="fact"><div class="lbl">Meses com compra</div><div class="val small">${ativos} de ${MESES.length}${ultMes?' · últ. '+mesLabel(ultMes.m):''}</div></div>
+      <div class="fact"><div class="lbl">Valor no período</div><div class="val">${brl(v.valorTotal)}</div></div>
+      <div class="fact"><div class="lbl">Volume</div><div class="val small">${numFmt(v.qtdTotal)} un</div></div>
+      <div class="fact"><div class="lbl">Lojas</div><div class="val small">${v.lojas}</div></div>
+      <div class="fact"><div class="lbl">Lançamentos aderidos</div><div class="val small">${lancAderidos(v)} de ${LANC.length}</div></div>
+      <div class="fact"><div class="lbl">Curva A cobertos</div><div class="val small">${curvaAComprados(v)} de ${totalCurvaA}</div></div>
+      <div class="fact"><div class="lbl">Meses com compra</div><div class="val small">${ativos} de ${nMeses}${ultMes?' · últ. '+mesLabel(ultMes.m):''}</div></div>
     </div>
-
     <div class="card">
       <h3>Desempenho mês a mês</h3>
-      <p class="hint">Como a rede vem comprando ao longo do período — valor e volume.</p>
-      <div>${valVolChartSVG(r.serieMensal)}</div>
+      <p class="hint">Como a rede vem comprando no período selecionado — valor e volume.</p>
+      <div>${valVolChartSVG(v.serieMensal)}</div>
     </div>
-
     <div class="card">
-      <h3>Adesão aos lançamentos (${lancAderidos(r)}/${LANC.length})</h3>
-      <p class="hint">Verde = a rede já comprou o lançamento. Cinza = ainda não aderiu (oportunidade de introdução).</p>
+      <h3>Adesão aos lançamentos (${lancAderidos(v)}/${LANC.length})</h3>
+      <p class="hint">Verde = a rede já comprou o lançamento no período. Cinza = ainda não aderiu (oportunidade de introdução).</p>
       <div class="chips">${lancChips}</div>
     </div>
-
     <div class="grid2">
       <div class="card">
         <h3>🎯 Oportunidades — curva A/B que a rede NÃO compra</h3>
-        <p class="hint">Produtos importantes (alto valor na empresa) que esta rede ainda não compra.</p>
+        <p class="hint">Produtos importantes (alto valor na empresa) que esta rede não compra no período.</p>
         <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Produto</th><th>Marca</th><th>Curva</th><th class="num">Valor (empresa)</th></tr></thead><tbody>${oportRows}</tbody></table></div>
       </div>
       <div class="card">
         <h3>⚠️ Parou de comprar (curva A/B)</h3>
-        <p class="hint">Produtos relevantes que a rede comprava e não compra há 2+ meses.</p>
+        <p class="hint">Produtos relevantes que a rede comprava no período e parou há 2+ meses.</p>
         <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Produto</th><th>Marca</th><th>Curva</th><th>Última compra</th><th class="num">Valor</th></tr></thead><tbody>${parouRows}</tbody></table></div>
       </div>
     </div>
-
     <details class="disc">
-      <summary><span>Todos os produtos da rede (${r.produtos.length})</span><span></span></summary>
+      <summary><span>Todos os produtos da rede no período (${v.produtos.length})</span><span></span></summary>
       <div class="tbl-wrap" style="margin-top:14px"><table class="tbl"><thead><tr><th>Produto</th><th>Marca</th><th>Curva</th><th></th><th>Período</th><th class="num">Volume</th><th class="num">Valor</th></tr></thead><tbody>${prodRows}</tbody></table></div>
     </details>`;
 }
 
-/* ===== Init / render ===== */
 function montarSelect(){
   const sel=document.getElementById('redeSelect');
   sel.innerHTML=CC.redes.map((r,i)=>`<option value="${i}">${escapeHtml(r.nome)} (${r.lojas} loja${r.lojas>1?'s':''})</option>`).join('');
   sel.addEventListener('change',()=>renderRede(+sel.value));
 }
+function renderAll(){
+  RANGE=getRange();
+  document.getElementById('perInfo').textContent = mesLabel(MESES[RANGE[0]]) + ' a ' + mesLabel(MESES[RANGE[1]]);
+  const views=CC.redes.map(viewOf);
+  renderResumo(views); renderOverview(views);
+  renderRede(+(document.getElementById('redeSelect').value||0));
+}
 function start(){
   document.getElementById('conteudo').style.display='';
-  renderResumo(); renderOverview(); montarSelect();
-  if(CC.redes.length) renderRede(0);
+  const opts=MESES.map((m,i)=>`<option value="${i}">${mesLabel(m)}</option>`).join('');
+  const de=document.getElementById('perDe'), ate=document.getElementById('perAte');
+  de.innerHTML=opts; ate.innerHTML=opts; de.value=0; ate.value=MESES.length-1;
+  de.addEventListener('change',renderAll); ate.addEventListener('change',renderAll);
+  document.getElementById('perReset').addEventListener('click',()=>{ de.value=0; ate.value=MESES.length-1; renderAll(); });
+  montarSelect();
+  renderAll();
 }
 
 /* ===== Acesso ===== */
@@ -267,7 +284,7 @@ function applyAcc(acc){
   document.getElementById('gate').style.display='none';
   start();
 }
-function showGate(msg){ document.getElementById('gate').style.display='flex'; document.getElementById('conteudo').style.display='none'; document.getElementById('acessoBar').style.display='none'; if(msg) document.getElementById('gateErr').textContent=msg; setTimeout(()=>document.getElementById('gatePass').focus(),50); }
+function showGate(){ document.getElementById('gate').style.display='flex'; document.getElementById('conteudo').style.display='none'; document.getElementById('acessoBar').style.display='none'; setTimeout(()=>document.getElementById('gatePass').focus(),50); }
 async function tentar(){ const hex=await sha256hex(document.getElementById('gatePass').value.trim()); const acc=ACESSOS.find(a=>a.h===hex);
   if(acc && podeVer(acc)){ try{localStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){} applyAcc(acc); }
   else if(acc){ document.getElementById('gateErr').textContent='Este relatório é exclusivo de Contas Chaves.'; }
