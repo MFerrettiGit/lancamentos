@@ -60,8 +60,8 @@ section{margin-top:30px}
 .tbl-wrap{overflow-x:auto}
 .tbl a{color:var(--azul);font-weight:600;text-decoration:none}
 .pill{display:inline-block;font-size:.66rem;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:.4px}
-.pill.A{background:#ffe3e3;color:#c0392b}.pill.B{background:#fff3d6;color:#a5740a}.pill.C{background:#eef0ff;color:#5b5fb0}
-[data-theme="dark"] .pill.A{background:#3a2326;color:#ff9a9a}[data-theme="dark"] .pill.B{background:#3a3320;color:#f5c97a}[data-theme="dark"] .pill.C{background:#23283a;color:#aeb4ff}
+.pill.A{background:#ffe3e3;color:#c0392b}.pill.B{background:#fff3d6;color:#a5740a}.pill.C{background:#eef0ff;color:#5b5fb0}.pill.D{background:#eceef2;color:#7a8093}
+[data-theme="dark"] .pill.A{background:#3a2326;color:#ff9a9a}[data-theme="dark"] .pill.B{background:#3a3320;color:#f5c97a}[data-theme="dark"] .pill.C{background:#23283a;color:#aeb4ff}[data-theme="dark"] .pill.D{background:#21242f;color:#9aa0bd}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;padding:6px 12px;border-radius:999px}
 .chip.on{background:#e9fbef;color:var(--verde-2)}
@@ -153,6 +153,7 @@ footer{margin-top:48px;padding:28px 0 44px;color:var(--muted);font-size:.84rem;t
 <script>
 function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
+function pillC(c){ return (c&&c!=='-')?`<span class="pill ${c}">${c}</span>`:'<span style="color:var(--muted);font-size:.7rem">–</span>'; }
 
 const CC = window.CONTAS_CHAVES || {redes:[],curvaAB:[],meta:{meses:[],lancamentos:[]}};
 const ACESSOS = window.ACESSOS || [];
@@ -209,10 +210,10 @@ function renderRede(i){
   const lancChips=LANC.map(c=>{ const on=compradosLanc.has(c); const prod=v.produtos.find(p=>p.c===c)||r.produtos.find(p=>p.c===c); const nome=prod?prod.d:c; return `<span class="chip ${on?'on':'off'}">${on?'✓':'·'} ${escapeHtml(nome)}</span>`; }).join('');
   const comprados=new Set(v.produtos.map(p=>p.c));
   const oport=CC.curvaAB.filter(x=>!comprados.has(x.c)).slice(0,15);
-  const oportRows=oport.map(x=>`<tr><td>${escapeHtml(x.d)}</td><td>${escapeHtml(x.mk)}</td><td><span class="pill ${x.curva}">${x.curva}</span></td><td class="num">${brl(x.v)}</td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--muted)">A rede compra todos os produtos curva A/B. 👏</td></tr>';
-  const parou=v.produtos.filter(p=>p.curva!=='C' && p.pmax && p.pmax < ULT2).sort((a,b)=>b.v-a.v);
-  const parouRows=parou.map(p=>`<tr><td>${escapeHtml(p.d)}</td><td>${escapeHtml(p.mk)}</td><td><span class="pill ${p.curva}">${p.curva}</span></td><td>${mesLabel(p.pmax)}</td><td class="num">${brl(p.v)}</td></tr>`).join('') || '<tr><td colspan="5" style="color:var(--muted)">Nenhum produto curva A/B parou de ser comprado no período. 👍</td></tr>';
-  const prodRows=v.produtos.map(p=>`<tr><td>${escapeHtml(p.d)}</td><td>${escapeHtml(p.mk)}</td><td><span class="pill ${p.curva}">${p.curva}</span></td><td>${p.lanc?'<span class="pill" style="background:#e9fbef;color:#1d7a35">LANÇ.</span>':''}</td><td>${p.pmin?mesLabel(p.pmin):''}–${p.pmax?mesLabel(p.pmax):''}</td><td class="num">${numFmt(p.q)}</td><td class="num">${brl(p.v)}</td></tr>`).join('') || '<tr><td colspan="7" style="color:var(--muted)">Sem compras no período.</td></tr>';
+  const oportRows=oport.map(x=>`<tr><td>${escapeHtml(x.d)}</td><td>${escapeHtml(x.mk)}</td><td>${pillC(x.curva)}</td><td class="num">${brl(x.v)}</td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--muted)">A rede compra todos os produtos curva A/B. 👏</td></tr>';
+  const parou=v.produtos.filter(p=>(p.curva==='A'||p.curva==='B') && p.pmax && p.pmax < ULT2).sort((a,b)=>b.v-a.v);
+  const parouRows=parou.map(p=>`<tr><td>${escapeHtml(p.d)}</td><td>${escapeHtml(p.mk)}</td><td>${pillC(p.curva)}</td><td>${mesLabel(p.pmax)}</td><td class="num">${brl(p.v)}</td></tr>`).join('') || '<tr><td colspan="5" style="color:var(--muted)">Nenhum produto curva A/B parou de ser comprado no período. 👍</td></tr>';
+  const prodRows=v.produtos.map(p=>`<tr><td>${escapeHtml(p.d)}</td><td>${escapeHtml(p.mk)}</td><td>${pillC(p.curva)}</td><td>${p.lanc?'<span class="pill" style="background:#e9fbef;color:#1d7a35">LANÇ.</span>':''}</td><td>${p.pmin?mesLabel(p.pmin):''}–${p.pmax?mesLabel(p.pmax):''}</td><td class="num">${numFmt(p.q)}</td><td class="num">${brl(p.v)}</td></tr>`).join('') || '<tr><td colspan="7" style="color:var(--muted)">Sem compras no período.</td></tr>';
 
   document.getElementById('redeDetalhe').innerHTML=`
     <div class="facts" style="margin-top:14px">

@@ -1,5 +1,5 @@
 ﻿window.LANCAMENTOS = {
-  meta: { atualizadoEm: "17/06/2026 12:10", periodoDados: "01/2025 a 06/2026", metaClientes: 200, metaPorSetor: 15 },
+  meta: { atualizadoEm: "18/06/2026 09:30", periodoDados: "01/2025 a 06/2026", metaClientes: 200, metaPorSetor: 15 },
   produtos: [
   {
     codigo: "CREYAMAH2",
