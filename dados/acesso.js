@@ -1,4 +1,4 @@
-// Gerado de senhas.json + setores ATIVOS do lancamentos (Centro Oeste fora). NAO editar a mao.
+// Gerado de senhas.json + setores ATIVOS do lancamentos (Centro Oeste fora; Campinas Sul juntou na Norte). NAO editar a mao.
 window.SETOR_REGIONAL = {
   "AMERICANA": "NORDESTE",
   "CIRCUITO": "NORDESTE",
@@ -11,7 +11,6 @@ window.SETOR_REGIONAL = {
   "CONTAS CHAVES CPS": "SUDESTE",
   "ATIBAIA": "SUL",
   "CAMPINAS NORTE": "SUL",
-  "CAMPINAS SUL": "SUL",
   "CARAGUATATUBA": "SUL",
   "INDAIATUBA": "SUL",
   "ITAPETININGA": "SUL",

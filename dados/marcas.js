@@ -1,5 +1,5 @@
 ﻿window.MARCAS = {
-  meta: { atualizadoEm: "25/06/2026 09:26", periodoDados: "01/2025 a 06/2026" },
+  meta: { atualizadoEm: "25/06/2026 15:31", periodoDados: "01/2025 a 06/2026" },
   marcas: [
   {
     marca: "AER",
