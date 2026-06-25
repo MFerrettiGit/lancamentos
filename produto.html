@@ -204,6 +204,8 @@ function fmtData(iso){ const p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
 function escapeAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
+const EXCLSET=new Set(['excluidos','mferretti']);
+function isExcl(setor){ return EXCLSET.has(norm(setor)); }
 
 const P = window.PRODUTOS_POSITIVACAO;
 const MK = window.MARCAS || { marcas: [] };
@@ -238,7 +240,7 @@ function applyAcc(acc){
   document.getElementById('acessoBar').style.display='';
   let extra = ALLOWED ? (' · ' + ALLOWED.size + ' setor(es)') : '';
   document.getElementById('acessoLabel').textContent = 'Acesso: ' + acc.label + extra;
-  document.getElementById('yoyWrap').style.display = isTodos() ? '' : 'none';
+  document.getElementById('yoyWrap').style.display = '';
 }
 
 /* ===== Período ===== */
@@ -251,20 +253,17 @@ function getRange(){ let a=+perDe.value,b=+perAte.value; if(a>b){const t=a;a=b;b
 /* ===== Agregação (filtra por escopo) ===== */
 function aggregate(prods,i0,i1){
   const mesesCli=MESES.map(()=>new Set());
-  const vMes=MESES.map(()=>0), qMes=MESES.map(()=>0); // mensal global (válido só p/ todos)
-  let valScoped=0, qScoped=0;
-  prods.forEach(p=>{
-    if(isTodos()){ p.serieMensal.forEach((m,i)=>{ vMes[i]+=m.v; qMes[i]+=m.q; }); }
-    (p.setores||[]).forEach(s=>{
-      if(ALLOWED && !ALLOWED.has(s.nome)) return;
-      s.lista.forEach(c=>{ valScoped+=c.v; qScoped+=c.q; (c.m||[]).forEach(idx=>{ if(mesesCli[idx]) mesesCli[idx].add(c.cod); }); });
-    });
-  });
+  const vMes=MESES.map(()=>0), qMes=MESES.map(()=>0);
+  prods.forEach(p=>{ (p.setores||[]).forEach(s=>{
+    if(isExcl(s.nome)) return;
+    if(ALLOWED && !ALLOWED.has(s.nome)) return;
+    s.lista.forEach(c=>{ (c.mv||[]).forEach(e=>{ const idx=e[0]; if(mesesCli[idx]){ mesesCli[idx].add(c.cod); vMes[idx]+=e[1]; qMes[idx]+=e[2]; } }); });
+  }); });
   const rangeCli=new Set(); let valor=0,qtd=0; const serie=[];
   for(let i=i0;i<=i1;i++){ valor+=vMes[i]; qtd+=qMes[i]; mesesCli[i].forEach(c=>rangeCli.add(c)); serie.push({m:MESES[i],c:mesesCli[i].size,v:vMes[i],q:qMes[i]}); }
   let soma=0,nm=0; serie.forEach(s=>{ if(s.c>0){soma+=s.c;nm++;} });
   const posMedia=nm?Math.round(soma/nm*10)/10:0;
-  return { dist:rangeCli.size, valor:(isTodos()?valor:valScoped), qtd:(isTodos()?qtd:qScoped), posMedia, serie, fullV:vMes };
+  return { dist:rangeCli.size, valor, qtd, posMedia, serie, fullV:vMes };
 }
 
 /* ===== Estado e render ===== */
@@ -280,22 +279,15 @@ function render(){
 
   const distLabel = CTX.mode==='selecao' ? 'Distribuição (lojas únicas)' : 'Distribuição (lojas atendidas)';
   const facts=[[distLabel,numFmt(agg.dist),''],['Positivação média mensal',numFmt(agg.posMedia)+' clientes/mês','']];
-  if(isTodos()){ facts.push(['Valor no período',brl(agg.valor),'']); facts.push(['Quantidade no período',numFmt(agg.qtd),'small']); }
-  else { facts.push(['Valor (seu acesso, período completo)',brl(agg.valor),'small']); facts.push(['Quantidade (período completo)',numFmt(agg.qtd),'small']); }
+  facts.push(['Valor no período',brl(agg.valor),'']); facts.push(['Quantidade no período',numFmt(agg.qtd),'small']);
   if(CTX.mode==='marca')   facts.push(['Produtos da marca',numFmt(CTX.prods.length),'small']);
   if(CTX.mode==='selecao') facts.push(['Produtos selecionados',numFmt(CTX.prods.length),'small']);
   document.getElementById('pFacts').innerHTML=facts.map(f=>`<div class="fact"><div class="lbl">${f[0]}</div><div class="val ${f[2]==='small'?'small':''}">${f[1]}</div></div>`).join('');
 
   let prev=null;
-  if(isTodos() && YOY){ prev=[]; for(let i=i0;i<=i1;i++) prev.push(i-12>=0?agg.fullV[i-12]:null); }
-
-  if(isTodos()){
-    document.getElementById('pChart').innerHTML = YOY ? comboBarsSVG(agg.serie,prev) : comboChartSVG2(agg.serie,{});
-    document.getElementById('chartDesc').textContent = YOY ? 'Barras de valor vendido: azul = ano atual · dourado = mesmo mês do ano anterior' : 'Barras = clientes distintos no mês · Linha verde = valor vendido';
-  } else {
-    document.getElementById('pChart').innerHTML = clientsBarsSVG(agg.serie);
-    document.getElementById('chartDesc').textContent = 'Barras = clientes distintos do seu setor por mês. (Valor mensal não é detalhado por setor.)';
-  }
+  if(YOY){ prev=[]; for(let i=i0;i<=i1;i++) prev.push(i-12>=0?agg.fullV[i-12]:null); }
+  document.getElementById('pChart').innerHTML = YOY ? comboBarsSVG(agg.serie,prev) : comboChartSVG2(agg.serie,{});
+  document.getElementById('chartDesc').textContent = YOY ? 'Barras de valor vendido: azul = ano atual · dourado = mesmo mês do ano anterior' : 'Barras = clientes distintos no mês · Linha verde = valor vendido';
   renderTabela(agg.serie, agg.dist, prev);
 
   if(CTX.mode!=='produto'){
@@ -304,20 +296,14 @@ function render(){
   } else renderProdutos(null);
 
   const intersect = (CTX.mode==='selecao' && CTX.prods.length>1);
-  const hint = intersect ? ('clientes que compraram TODOS os '+CTX.prods.length+' selecionados · período completo')
-                         : 'período completo · clique para abrir';
-  const emptyMsg = intersect ? 'Nenhum cliente comprou todos os produtos selecionados.' : 'Sem clientes no seu acesso.';
-  renderSetores(buildSetores(CTX.prods, intersect), hint, emptyMsg);
+  const hint = intersect ? ('clientes que compraram TODOS os '+CTX.prods.length+' selecionados · no período')
+                         : 'no período · clique para abrir';
+  const emptyMsg = intersect ? 'Nenhum cliente comprou todos os produtos selecionados no período.' : 'Sem clientes no período.';
+  renderSetores(buildSetores(CTX.prods, intersect, i0, i1), hint, emptyMsg);
 }
 
 function renderTabela(serie,distTotal,prev){
   const head=document.getElementById('tblMensalHead'), body=document.getElementById('tblMensalBody');
-  if(!isTodos()){
-    head.innerHTML='<tr><th>Mês</th><th class="num">Clientes</th></tr>';
-    body.innerHTML=serie.map(m=>`<tr><td>${mesLabel(m.m)}</td><td class="num">${numFmt(m.c)}</td></tr>`).join('')
-      + `<tr class="tot"><td>TOTAL</td><td class="num">${numFmt(distTotal)}</td></tr>`;
-    return;
-  }
   head.innerHTML = prev
     ? '<tr><th>Mês</th><th class="num">Clientes</th><th class="num">Qtd</th><th class="num">Valor</th><th class="num">Valor (ano ant.)</th><th class="num">Crescimento</th></tr>'
     : '<tr><th>Mês</th><th class="num">Clientes</th><th class="num">Quantidade</th><th class="num">Valor</th></tr>';
@@ -349,11 +335,13 @@ document.getElementById('produtosBody').addEventListener('click', e=>{
 
 // Monta os setores/clientes a partir de um CONJUNTO de produtos.
 // intersect=true (seleção 2+): só clientes que compraram TODOS os produtos.
-function buildSetores(prods, intersect){
+function buildSetores(prods, intersect, i0, i1){
   const byCli={};
   prods.forEach(p=>{ (p.setores||[]).forEach(s=>{
+    if(isExcl(s.nome)) return;
     if(ALLOWED && !ALLOWED.has(s.nome)) return;
-    s.lista.forEach(c=>{ let o=byCli[c.cod]; if(!o){ o=byCli[c.cod]={setor:s.nome,nome:c.nome,v:0,q:0,np:0}; } o.v+=c.v; o.q+=c.q; o.np++; });
+    s.lista.forEach(c=>{ let v=0,q=0,inR=false; (c.mv||[]).forEach(e=>{ if(e[0]>=i0&&e[0]<=i1){ v+=e[1]; q+=e[2]; inR=true; } }); if(!inR) return;
+      let o=byCli[c.cod]; if(!o){ o=byCli[c.cod]={setor:s.nome,nome:c.nome,v:0,q:0,np:0}; } o.v+=v; o.q+=q; o.np++; });
   }); });
   const n=prods.length, bySetor={};
   Object.keys(byCli).forEach(cod=>{ const o=byCli[cod]; if(intersect && o.np<n) return;

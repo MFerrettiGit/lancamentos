@@ -126,6 +126,8 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 <script>
 function fmtData(iso){ const p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
 function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
+const EXCLSET=new Set(['excluidos','mferretti']);
+function isExcl(setor){ return EXCLSET.has(norm(setor)); }
 
 const L = window.LANCAMENTOS;
 const ACESSOS = window.ACESSOS || [];
@@ -150,7 +152,7 @@ function computeAllowed(acc){
 function nSetoresEscopo(){ return ALLOWED ? ALLOWED.size : TODOS_SETORES; }
 
 function scoped(p){
-  const cli=(p.clientesSetor||[]).filter(c=>!ALLOWED||ALLOWED.has(c.s));
+  const cli=(p.clientesSetor||[]).filter(c=> !isExcl(c.s) && (!ALLOWED||ALLOWED.has(c.s)));
   const first={};
   cli.forEach(c=>{ const mn=Math.min.apply(null,c.m); if(first[c.c]===undefined||mn<first[c.c]) first[c.c]=mn; });
   const novos=new Array(NMESES).fill(0);
