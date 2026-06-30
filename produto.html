@@ -62,6 +62,9 @@ h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.45rem;display:fle
 .prodhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:6px}
 .prodhead .marca{font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--azul);background:#eef0ff;padding:4px 10px;border-radius:999px}
 .prodcodigo{color:var(--muted);font-size:.95rem;margin-bottom:16px}
+.pptbtn{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-family:'Plus Jakarta Sans';font-weight:700;font-size:.85rem;color:#fff;background:var(--verde-2);border:none;padding:9px 16px;border-radius:999px;cursor:pointer;box-shadow:0 6px 16px rgba(40,167,69,.32)}
+.pptbtn:hover{filter:brightness(1.06)}
+.pptbtn:disabled,.pptbtn.busy{opacity:.6;cursor:wait;box-shadow:none}
 .controls{display:flex;flex-wrap:wrap;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:18px}
 .ctl{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:600;color:var(--muted)}
 .ctl select{padding:7px 10px;border:2px solid var(--line);border-radius:9px;font-family:'DM Sans';font-size:.85rem;background:var(--card);color:var(--ink)}
@@ -162,7 +165,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
   </div>
 
   <section id="resultado">
-    <div class="prodhead"><span class="marca" id="pMarca"></span></div>
+    <div class="prodhead"><span class="marca" id="pMarca"></span><button class="pptbtn" id="pptBtn" type="button">📊 Criar apresentação</button></div>
     <h2 id="pNome"></h2>
     <div class="prodcodigo" id="pCodigo"></div>
     <div class="controls">
@@ -199,6 +202,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 <script src="dados/produtos.js"></script>
 <script src="dados/marcas.js"></script>
 <script src="assets/charts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script>
 function fmtData(iso){ const p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
 function escapeAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -415,6 +419,175 @@ document.getElementById('sairBtn').addEventListener('click',()=>{ try{localStora
 const params=new URLSearchParams(location.search); const ci=params.get('codigo'), mi=params.get('marca');
 function applyDeepLink(){ if(mi&&porMarca[mi.toUpperCase()]){ setMode('marca'); marcaSelect.value=mi.toUpperCase(); showMarca(mi.toUpperCase()); return true; }
   if(ci&&porCodigo[ci.toUpperCase()]){ showProduto(porCodigo[ci.toUpperCase()]); return true; } return false; }
+
+/* ===== Apresentação (.pptx) — gerada no navegador via PptxGenJS ===== */
+const PPT={AZUL:'2B2FA8',AZULD:'1C1F78',AZUL2:'3A3FD0',VERDE:'28A745',OURO:'F5B942',INK:'16182E',MUTED:'6B6F8A',LINE:'E7EAF3',CINZA:'AEB4FF',LILAS:'D4D7FF',FONT:'Segoe UI'};
+let LOGO_BRANCO=null, LOGO_AZUL=null;
+async function toDataURL(url){ try{ const r=await fetch(url); if(!r.ok) return null; const b=await r.blob();
+  return await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>res(null); fr.readAsDataURL(b); }); }catch(e){ return null; } }
+
+function buildProdRows(i0,i1){
+  return CTX.prods.map(p=>{ const a=aggregate([p],i0,i1); return {codigo:p.codigo,descricao:p.descricao,clientes:a.dist,v:a.valor,q:a.qtd}; })
+    .filter(r=>r.v>0).sort((a,b)=>b.v-a.v);
+}
+function gerarInsights(agg,serie,prev,prodRows,setores,i0,i1){
+  const ins=[]; const nMes=serie.length;
+  const mesesComV=serie.filter(s=>s.v>0).length; const mediaMes=mesesComV?agg.valor/mesesComV:0;
+  ins.push(`No período (${mesLabel(MESES[i0])} a ${mesLabel(MESES[i1])}): ${brl(agg.valor)} em ${numFmt(agg.qtd)} unidades — média de ${brl(mediaMes)}/mês.`);
+  if(nMes>1){ let best=serie[0],worst=serie[0]; serie.forEach(s=>{ if(s.v>best.v)best=s; if(s.v<worst.v)worst=s; });
+    ins.push(`Melhor mês: ${mesLabel(best.m)} (${brl(best.v)}). Mais fraco: ${mesLabel(worst.m)} (${brl(worst.v)}).`); }
+  if(nMes>=4){ const k=Math.min(3,Math.floor(nMes/2));
+    const ini=serie.slice(0,k).reduce((s,x)=>s+x.v,0)/k, fim=serie.slice(-k).reduce((s,x)=>s+x.v,0)/k;
+    if(ini>0){ const d=(fim-ini)/ini*100; const t=d>=8?'em crescimento':d<=-8?'em queda':'estável';
+      ins.push(`Tendência ${t}: média dos últimos ${k} meses ${d>=0?'+':''}${d.toFixed(0)}% vs. os ${k} primeiros do período.`); } }
+  const topSetor=setores[0];
+  let dl=`Presença em ${numFmt(agg.dist)} loja(s)`+(setores.length?` em ${setores.length} setor(es)`:'')+'.';
+  if(topSetor) dl+=` Maior praça: ${topSetor.nome} (${brl(topSetor.v)} · ${numFmt(topSetor.clientes)} clientes).`;
+  ins.push(dl);
+  if(agg.dist>0) ins.push(`Valor médio por loja atendida: ${brl(agg.valor/agg.dist)}.`);
+  if(prodRows && prodRows.length>1){ const tot=prodRows.reduce((s,r)=>s+r.v,0)||1;
+    const t1=prodRows[0], t5=prodRows.slice(0,5).reduce((s,r)=>s+r.v,0);
+    ins.push(`Carro-chefe: ${t1.descricao} (${(t1.v/tot*100).toFixed(0)}% do valor). Os 5 principais somam ${(t5/tot*100).toFixed(0)}%.`); }
+  ins.push(`Positivação média mensal: ${numFmt(agg.posMedia)} clientes/mês.`);
+  if(prev){ const pt=prev.reduce((s,x)=>s+(x||0),0); if(pt>0){ const d=(agg.valor-pt)/pt*100;
+    ins.push(`Vs. mesmo período do ano anterior (${brl(pt)}): ${d>=0?'+':''}${d.toFixed(0)}%.`); } }
+  return ins;
+}
+
+async function criarApresentacao(){
+  if(!CTX) return;
+  if(typeof PptxGenJS==='undefined'){ alert('A biblioteca da apresentação ainda está carregando. Tente novamente em alguns segundos.'); return; }
+  const orig=pptBtn.textContent; pptBtn.classList.add('busy'); pptBtn.disabled=true; pptBtn.textContent='⏳ Gerando…';
+  try{
+    if(LOGO_BRANCO===null) LOGO_BRANCO=await toDataURL('assets/ferretti-branco.png');
+    if(LOGO_AZUL===null)   LOGO_AZUL=await toDataURL('assets/ferretti-azul.png');
+    const [i0,i1]=getRange();
+    const agg=aggregate(CTX.prods,i0,i1);
+    let prev=null; if(YOY){ prev=[]; for(let i=i0;i<=i1;i++) prev.push(i-12>=0?agg.fullV[i-12]:null); }
+    const intersect=(CTX.mode==='selecao'&&CTX.prods.length>1);
+    const setores=buildSetores(CTX.prods,intersect,i0,i1);
+    const prodRows=(CTX.mode!=='produto')?buildProdRows(i0,i1):null;
+    const insights=gerarInsights(agg,agg.serie,prev,prodRows,setores,i0,i1);
+    await montarPptx(agg,agg.serie,prev,setores,prodRows,insights,i0,i1);
+  }catch(e){ console.error(e); alert('Não consegui gerar a apresentação: '+(e&&e.message?e.message:e)); }
+  finally{ pptBtn.classList.remove('busy'); pptBtn.disabled=false; pptBtn.textContent=orig; }
+}
+
+async function montarPptx(agg,serie,prev,setores,prodRows,insights,i0,i1){
+  const pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE'; pptx.author='M. Ferretti Distribuidora'; pptx.company='M. Ferretti';
+  const periodo=mesLabel(MESES[i0])+' a '+mesLabel(MESES[i1]);
+  const escopo=(ACC&&ACC.escopo&&ACC.escopo!=='todos')?(ACC.escopo==='regional'?('Regional '+ACC.valor):('Setor '+ACC.valor)):'Visão geral';
+  let marcaCode=null, fornecedor='';
+  if(CTX.mode==='marca'){ marcaCode=CTX.badge.replace('MARCA ','').trim(); const m=porMarca[marcaCode]; if(m) fornecedor=m.fornecedor; }
+  const coverTitle = CTX.mode==='marca' ? (fornecedor||marcaCode) : (CTX.mode==='selecao'?'Seleção de produtos':CTX.titulo);
+  const coverSub   = CTX.mode==='marca' ? ('Marca '+marcaCode+' · '+CTX.prods.length+' produtos')
+                    : CTX.mode==='selecao' ? (CTX.prods.length+' produto(s) selecionado(s)')
+                    : ('Código: '+(CTX.sub||'').replace('Código: ',''));
+
+  pptx.defineSlideMaster({title:'M',background:{color:'FFFFFF'},
+    objects:[{rect:{x:0,y:7.16,w:'100%',h:0.012,fill:{color:PPT.LINE}}},
+      {text:{text:'M. Ferretti Distribuidora · Acompanhamento de lançamentos · Uso interno',options:{x:0.5,y:7.04,w:9,h:0.3,fontSize:8,color:PPT.MUTED,fontFace:PPT.FONT}}}],
+    slideNumber:{x:12.55,y:7.04,w:0.6,h:0.3,fontSize:8,color:PPT.MUTED,fontFace:PPT.FONT}});
+
+  function addTitle(s,title,sub){
+    s.addText(title,{x:0.5,y:0.42,w:12,h:0.6,fontSize:25,bold:true,color:PPT.INK,fontFace:PPT.FONT});
+    if(sub) s.addText(sub,{x:0.5,y:1.0,w:12,h:0.4,fontSize:13,color:PPT.MUTED,fontFace:PPT.FONT});
+    s.addShape(pptx.ShapeType.rect,{x:0.5,y:1.42,w:0.85,h:0.06,fill:{color:PPT.VERDE}});
+  }
+
+  /* --- Capa --- */
+  let s=pptx.addSlide(); s.background={color:PPT.AZULD};
+  s.addShape(pptx.ShapeType.ellipse,{x:10.0,y:-1.8,w:5.0,h:5.0,fill:{color:PPT.AZUL},line:{type:'none'}});
+  s.addShape(pptx.ShapeType.ellipse,{x:11.7,y:4.7,w:3.2,h:3.2,fill:{color:PPT.AZUL2},line:{type:'none'}});
+  if(LOGO_BRANCO) s.addImage({data:LOGO_BRANCO,x:0.6,y:0.55,w:2.5,sizing:{type:'contain',w:2.5,h:0.62}});
+  s.addText('APRESENTAÇÃO AO FORNECEDOR',{x:0.62,y:2.25,w:10,h:0.4,fontSize:13,bold:true,color:PPT.CINZA,charSpacing:2,fontFace:PPT.FONT});
+  s.addText(coverTitle,{x:0.6,y:2.75,w:11.5,h:1.5,fontSize:40,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
+  s.addText(coverSub,{x:0.62,y:4.35,w:11.5,h:0.6,fontSize:17,color:PPT.LILAS,fontFace:PPT.FONT});
+  s.addText([{text:'Período: ',options:{bold:true}},{text:periodo,options:{}},{text:'      Acesso: ',options:{bold:true}},{text:escopo,options:{}},{text:'      Atualizado em ',options:{bold:true}},{text:P.meta.atualizadoEm,options:{}}],
+    {x:0.62,y:6.4,w:12,h:0.4,fontSize:11,color:PPT.LILAS,fontFace:PPT.FONT});
+
+  /* --- Resumo executivo (KPIs) --- */
+  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Resumo executivo',coverTitle+' · '+periodo);
+  const kpis=[['DISTRIBUIÇÃO',numFmt(agg.dist)+' lojas',PPT.AZUL],['POSITIVAÇÃO MÉDIA',numFmt(agg.posMedia)+' /mês',PPT.AZUL],
+    ['VALOR NO PERÍODO',brl(agg.valor),PPT.VERDE],['QUANTIDADE',numFmt(agg.qtd)+' un',PPT.AZUL]];
+  const cw=2.86, gap=0.27, x0=0.55, ky=1.85, kh=1.55;
+  kpis.forEach((k,i)=>{ const x=x0+i*(cw+gap);
+    s.addShape(pptx.ShapeType.roundRect,{x,y:ky,w:cw,h:kh,rectRadius:0.1,fill:{color:'FFFFFF'},line:{color:PPT.LINE,width:1},shadow:{type:'outer',color:'B8C0D8',opacity:0.45,blur:8,offset:3,angle:90}});
+    s.addText(k[0],{x:x+0.12,y:ky+0.18,w:cw-0.24,h:0.35,fontSize:10,bold:true,color:PPT.MUTED,charSpacing:1,fontFace:PPT.FONT});
+    s.addText(k[1],{x:x+0.12,y:ky+0.6,w:cw-0.24,h:0.7,fontSize:21,bold:true,color:k[2],fontFace:PPT.FONT,valign:'top'}); });
+  const prodLbl=CTX.mode==='marca'?(CTX.prods.length+' produtos na marca'):CTX.mode==='selecao'?(CTX.prods.length+' produto(s) selecionado(s)'):'Produto individual';
+  s.addShape(pptx.ShapeType.roundRect,{x:x0,y:3.7,w:cw*4+gap*3,h:2.7,rectRadius:0.08,fill:{color:'F4F6FB'},line:{color:PPT.LINE,width:1}});
+  s.addText('Destaque',{x:x0+0.3,y:3.95,w:11,h:0.35,fontSize:12,bold:true,color:PPT.VERDE,charSpacing:1,fontFace:PPT.FONT});
+  s.addText([{text:insights[0]+'\n',options:{breakLine:true}}].concat((prev&&insights[insights.length-1].startsWith('Vs.')?[{text:insights[insights.length-1]+'\n',options:{breakLine:true}}]:[]),
+    [{text:prodLbl,options:{color:PPT.MUTED}}]),
+    {x:x0+0.3,y:4.35,w:cw*4+gap*3-0.6,h:1.9,fontSize:15,color:PPT.INK,fontFace:PPT.FONT,valign:'top',lineSpacingMultiple:1.15});
+
+  /* --- Evolução mensal (gráfico) --- */
+  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Evolução mensal', prev?'Valor vendido — ano atual vs. ano anterior':'Valor vendido e clientes distintos por mês');
+  const labels=serie.map(x=>mesLabel(x.m)), vals=serie.map(x=>Math.round(x.v)), cls=serie.map(x=>x.c);
+  if(prev){
+    s.addChart(pptx.ChartType.bar,[{name:'Ano atual',labels,values:vals},{name:'Ano anterior',labels,values:prev.map(x=>Math.round(x||0))}],
+      {x:0.5,y:1.7,w:12.3,h:4.9,barGrouping:'clustered',chartColors:[PPT.AZUL,PPT.OURO],showLegend:true,legendPos:'b',legendFontSize:11,
+       valAxisLabelFormatCode:'#,##0',catAxisLabelFontSize:9,valAxisLabelFontSize:9});
+  } else {
+    s.addChart([
+      {type:pptx.ChartType.bar, data:[{name:'Valor (R$)',labels,values:vals}], options:{chartColors:[PPT.AZUL]}},
+      {type:pptx.ChartType.line,data:[{name:'Clientes',labels,values:cls}], options:{chartColors:[PPT.VERDE],secondaryValAxis:true,secondaryCatAxis:true,lineSize:3,lineDataSymbol:'circle',lineDataSymbolSize:6}}
+    ],{x:0.5,y:1.7,w:12.3,h:4.9,showLegend:true,legendPos:'b',legendFontSize:11,
+       valAxes:[{showValAxisTitle:true,valAxisTitle:'Valor (R$)',valAxisTitleFontSize:10,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9},{showValAxisTitle:true,valAxisTitle:'Clientes',valAxisTitleFontSize:10,valAxisLabelFontSize:9}],
+       catAxes:[{catAxisLabelFontSize:9},{catAxisHidden:true}]});
+  }
+
+  /* --- Análise --- */
+  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Análise','Leitura dos números do período');
+  s.addText(insights.map(t=>({text:t,options:{bullet:{code:'2022',indent:18},color:PPT.INK,fontSize:15,paraSpaceAfter:12,breakLine:true,fontFace:PPT.FONT}})),
+    {x:0.7,y:1.75,w:12.0,h:5.1,valign:'top',lineSpacingMultiple:1.1});
+
+  /* --- Principais produtos --- */
+  if(prodRows && prodRows.length){
+    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Principais produtos','Top '+Math.min(10,prodRows.length)+' por valor no período');
+    const th=t=>({text:t,options:{bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:11,fontFace:PPT.FONT,valign:'middle'}});
+    const rows=[[th('Produto'),th('Código'),{...th('Lojas'),options:{...th('').options,align:'right'}},{...th('Qtd'),options:{...th('').options,align:'right'}},{...th('Valor'),options:{...th('').options,align:'right'}}]];
+    prodRows.slice(0,10).forEach((r,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF';
+      rows.push([
+        {text:r.descricao,options:{fontSize:10,color:PPT.INK,fill:{color:bg},fontFace:PPT.FONT}},
+        {text:r.codigo,options:{fontSize:10,color:PPT.MUTED,fill:{color:bg},fontFace:PPT.FONT}},
+        {text:numFmt(r.clientes),options:{fontSize:10,align:'right',fill:{color:bg},fontFace:PPT.FONT}},
+        {text:numFmt(r.q),options:{fontSize:10,align:'right',fill:{color:bg},fontFace:PPT.FONT}},
+        {text:brl(r.v),options:{fontSize:10,align:'right',bold:true,color:PPT.INK,fill:{color:bg},fontFace:PPT.FONT}}]); });
+    s.addTable(rows,{x:0.5,y:1.65,w:12.33,colW:[5.6,2.6,1.3,1.4,1.83],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.36,valign:'middle'});
+  }
+
+  /* --- Distribuição por setor --- */
+  if(setores.length){
+    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Distribuição por setor', (escopo==='Visão geral'?'Setores e regionais atendidos no período':escopo+' · no período'));
+    const th=t=>({text:t,options:{bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:11,fontFace:PPT.FONT}});
+    const rows=[[th('Setor'),th('Regional'),{...th('Clientes'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:11,fontFace:PPT.FONT,align:'right'}},{...th('Qtd'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:11,fontFace:PPT.FONT,align:'right'}},{...th('Valor'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:11,fontFace:PPT.FONT,align:'right'}}]];
+    let tC=0,tQ=0,tV=0;
+    setores.slice(0,12).forEach((g,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF'; tC+=g.clientes; tQ+=g.q; tV+=g.v;
+      rows.push([
+        {text:g.nome,options:{fontSize:10,color:PPT.INK,fill:{color:bg},fontFace:PPT.FONT}},
+        {text:SETOR_REGIONAL[g.nome]||'—',options:{fontSize:10,color:PPT.MUTED,fill:{color:bg},fontFace:PPT.FONT}},
+        {text:numFmt(g.clientes),options:{fontSize:10,align:'right',fill:{color:bg},fontFace:PPT.FONT}},
+        {text:numFmt(g.q),options:{fontSize:10,align:'right',fill:{color:bg},fontFace:PPT.FONT}},
+        {text:brl(g.v),options:{fontSize:10,align:'right',bold:true,color:PPT.INK,fill:{color:bg},fontFace:PPT.FONT}}]); });
+    const tf={bold:true,fill:{color:'E8EBFF'},fontSize:10,color:PPT.INK,fontFace:PPT.FONT};
+    rows.push([{text:setores.length>12?('TOTAL (top 12 de '+setores.length+')'):'TOTAL',options:tf},{text:'',options:tf},
+      {text:numFmt(tC),options:{...tf,align:'right'}},{text:numFmt(tQ),options:{...tf,align:'right'}},{text:brl(tV),options:{...tf,align:'right'}}]);
+    s.addTable(rows,{x:0.5,y:1.65,w:12.33,colW:[4.5,2.6,1.6,1.6,2.03],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.34,valign:'middle'});
+  }
+
+  /* --- Encerramento --- */
+  s=pptx.addSlide(); s.background={color:PPT.AZULD};
+  s.addShape(pptx.ShapeType.ellipse,{x:-1.6,y:4.6,w:4.4,h:4.4,fill:{color:PPT.AZUL},line:{type:'none'}});
+  if(LOGO_BRANCO) s.addImage({data:LOGO_BRANCO,x:5.0,y:2.5,w:3.3,sizing:{type:'contain',w:3.3,h:0.8}});
+  s.addText('Obrigado.',{x:0,y:3.5,w:13.33,h:0.8,align:'center',fontSize:34,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
+  s.addText('M. Ferretti Distribuidora · Parceria que faz girar',{x:0,y:4.4,w:13.33,h:0.5,align:'center',fontSize:14,color:PPT.LILAS,fontFace:PPT.FONT});
+
+  const safe=(CTX.mode==='marca'?(marcaCode||'marca'):CTX.mode==='selecao'?'selecao':(CTX.badge||'rel')).replace(/[^A-Za-z0-9]/g,'');
+  await pptx.writeFile({fileName:'Apresentacao_'+safe+'_'+periodo.replace(/[^0-9A-Za-z]/g,'')+'.pptx'});
+}
+pptBtn.addEventListener('click',criarApresentacao);
 
 /* ===== Init ===== */
 const saved=isAuth();
