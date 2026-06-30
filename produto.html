@@ -426,32 +426,68 @@ let LOGO_BRANCO=null, LOGO_AZUL=null;
 async function toDataURL(url){ try{ const r=await fetch(url); if(!r.ok) return null; const b=await r.blob();
   return await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>res(null); fr.readAsDataURL(b); }); }catch(e){ return null; } }
 
-function buildProdRows(i0,i1){
-  return CTX.prods.map(p=>{ const a=aggregate([p],i0,i1); return {codigo:p.codigo,descricao:p.descricao,clientes:a.dist,v:a.valor,q:a.qtd}; })
-    .filter(r=>r.v>0).sort((a,b)=>b.v-a.v);
+function trunc(s,n){ s=s||''; return s.length>n? s.slice(0,n-1)+'…' : s; }
+
+/* Agregação rica p/ a apresentação: cobertura, positivações, frequência (recompra),
+   por produto (ticket e meses/cliente), por cliente (top) e série mensal. Respeita o acesso. */
+function aggregateRich(prods,i0,i1){
+  const vMes=MESES.map(()=>0), qMes=MESES.map(()=>0), cMesSet=MESES.map(()=>new Set());
+  const byCli={}; const globalCli=new Set(); const perProd=[]; let positivacoes=0;
+  prods.forEach(p=>{
+    let pv=0,pq=0; const pCli=new Map();
+    (p.setores||[]).forEach(s=>{
+      if(isExcl(s.nome)) return;
+      if(ALLOWED && !ALLOWED.has(s.nome)) return;
+      s.lista.forEach(c=>{
+        let cv=0,cq=0,touched=false; const pm=pCli.get(c.cod)||new Set();
+        (c.mv||[]).forEach(e=>{ const idx=e[0]; if(idx>=i0&&idx<=i1){ cv+=e[1]; cq+=e[2]; touched=true; pm.add(idx); vMes[idx]+=e[1]; qMes[idx]+=e[2]; cMesSet[idx].add(c.cod); } });
+        if(!touched) return;
+        pCli.set(c.cod,pm); pv+=cv; pq+=cq; globalCli.add(c.cod);
+        let o=byCli[c.cod]; if(!o){ o=byCli[c.cod]={nome:c.nome,setor:s.nome,v:0,q:0,meses:new Set(),prods:new Set()}; }
+        o.v+=cv; o.q+=cq; o.prods.add(p.codigo); pm.forEach(m=>o.meses.add(m));
+      });
+    });
+    const clientes=pCli.size; positivacoes+=clientes;
+    let fsum=0; pCli.forEach(set=>fsum+=set.size);
+    perProd.push({codigo:p.codigo,descricao:p.descricao,clientes,v:pv,q:pq,ticket:clientes?pv/clientes:0,freq:clientes?fsum/clientes:0});
+  });
+  const serie=[]; let valor=0,qtd=0;
+  for(let i=i0;i<=i1;i++){ valor+=vMes[i]; qtd+=qMes[i]; serie.push({m:MESES[i],c:cMesSet[i].size,v:vMes[i],q:qMes[i]}); }
+  let soma=0,nm=0; serie.forEach(s=>{ if(s.c>0){soma+=s.c;nm++;} }); const posMedia=nm?Math.round(soma/nm*10)/10:0;
+  let fs=0,nc=0; Object.values(byCli).forEach(o=>{ fs+=o.meses.size; nc++; });
+  const topClientes=Object.entries(byCli).map(([cod,o])=>({cod,nome:o.nome,setor:o.setor,v:o.v,q:o.q,nprod:o.prods.size,meses:o.meses.size})).sort((a,b)=>b.v-a.v);
+  return {dist:globalCli.size,valor,qtd,posMedia,serie,positivacoes,freqMediaCli:nc?fs/nc:0,perProd,topClientes};
 }
-function gerarInsights(agg,serie,prev,prodRows,setores,i0,i1){
-  const ins=[]; const nMes=serie.length;
-  const mesesComV=serie.filter(s=>s.v>0).length; const mediaMes=mesesComV?agg.valor/mesesComV:0;
-  ins.push(`No período (${mesLabel(MESES[i0])} a ${mesLabel(MESES[i1])}): ${brl(agg.valor)} em ${numFmt(agg.qtd)} unidades — média de ${brl(mediaMes)}/mês.`);
-  if(nMes>1){ let best=serie[0],worst=serie[0]; serie.forEach(s=>{ if(s.v>best.v)best=s; if(s.v<worst.v)worst=s; });
-    ins.push(`Melhor mês: ${mesLabel(best.m)} (${brl(best.v)}). Mais fraco: ${mesLabel(worst.m)} (${brl(worst.v)}).`); }
-  if(nMes>=4){ const k=Math.min(3,Math.floor(nMes/2));
-    const ini=serie.slice(0,k).reduce((s,x)=>s+x.v,0)/k, fim=serie.slice(-k).reduce((s,x)=>s+x.v,0)/k;
-    if(ini>0){ const d=(fim-ini)/ini*100; const t=d>=8?'em crescimento':d<=-8?'em queda':'estável';
-      ins.push(`Tendência ${t}: média dos últimos ${k} meses ${d>=0?'+':''}${d.toFixed(0)}% vs. os ${k} primeiros do período.`); } }
-  const topSetor=setores[0];
-  let dl=`Presença em ${numFmt(agg.dist)} loja(s)`+(setores.length?` em ${setores.length} setor(es)`:'')+'.';
-  if(topSetor) dl+=` Maior praça: ${topSetor.nome} (${brl(topSetor.v)} · ${numFmt(topSetor.clientes)} clientes).`;
-  ins.push(dl);
-  if(agg.dist>0) ins.push(`Valor médio por loja atendida: ${brl(agg.valor/agg.dist)}.`);
-  if(prodRows && prodRows.length>1){ const tot=prodRows.reduce((s,r)=>s+r.v,0)||1;
-    const t1=prodRows[0], t5=prodRows.slice(0,5).reduce((s,r)=>s+r.v,0);
-    ins.push(`Carro-chefe: ${t1.descricao} (${(t1.v/tot*100).toFixed(0)}% do valor). Os 5 principais somam ${(t5/tot*100).toFixed(0)}%.`); }
-  ins.push(`Positivação média mensal: ${numFmt(agg.posMedia)} clientes/mês.`);
-  if(prev){ const pt=prev.reduce((s,x)=>s+(x||0),0); if(pt>0){ const d=(agg.valor-pt)/pt*100;
-    ins.push(`Vs. mesmo período do ano anterior (${brl(pt)}): ${d>=0?'+':''}${d.toFixed(0)}%.`); } }
-  return ins;
+
+/* Análises automáticas (descritivas + oportunidades) para o fornecedor. */
+function gerarAnalise(R,prev,i0,i1){
+  const ger=[],opp=[]; const n=R.serie.length; const tot=R.valor||1;
+  const mesesComV=R.serie.filter(s=>s.v>0).length, mediaMes=mesesComV?R.valor/mesesComV:0;
+  ger.push(`Sell out de ${brl(R.valor)} no período (${mesLabel(MESES[i0])}–${mesLabel(MESES[i1])}), ${numFmt(R.qtd)} itens — média de ${brl(mediaMes)}/mês.`);
+  ger.push(`Cobertura de ${numFmt(R.dist)} loja(s) e ${numFmt(R.positivacoes)} positivações (produto × loja). Ticket médio por loja: ${brl(R.dist?R.valor/R.dist:0)}.`);
+  if(n>=2){ const ratio=R.freqMediaCli/n; const cls=ratio>=0.6?'alta recorrência':ratio>=0.35?'recorrência moderada':'baixa recorrência';
+    ger.push(`Frequência de compra: cada cliente comprou em média ${R.freqMediaCli.toFixed(1)} de ${n} meses (${cls}).`);
+    if(ratio<0.35 && R.dist>0) opp.push(`Ampla distribuição (${numFmt(R.dist)} lojas) porém baixa recompra (${R.freqMediaCli.toFixed(1)}/${n} meses): espaço claro para ações de recorrência e reposição nos PDVs já abertos.`); }
+  if(n>=4){ const k=Math.min(3,Math.floor(n/2)); const ini=R.serie.slice(0,k).reduce((s,x)=>s+x.v,0)/k, fim=R.serie.slice(-k).reduce((s,x)=>s+x.v,0)/k;
+    if(ini>0){ const d=(fim-ini)/ini*100; const t=d>=8?'em crescimento':d<=-8?'em queda':'estável'; ger.push(`Tendência de sell out ${t}: média dos últimos ${k} meses ${d>=0?'+':''}${d.toFixed(0)}% vs. os ${k} primeiros.`); } }
+  if(n>1){ let b=R.serie[0],w=R.serie[0]; R.serie.forEach(s=>{if(s.v>b.v)b=s;if(s.v<w.v)w=s;}); ger.push(`Pico em ${mesLabel(b.m)} (${brl(b.v)}); mês mais fraco ${mesLabel(w.m)} (${brl(w.v)}).`); }
+  ger.push(`Positivação média mensal de ${numFmt(R.posMedia)} clientes.`);
+  if(prev){ const pt=prev.reduce((s,x)=>s+(x||0),0); if(pt>0){ const d=(R.valor-pt)/pt*100; ger.push(`Vs. mesmo período do ano anterior (${brl(pt)}): ${d>=0?'+':''}${d.toFixed(0)}% de sell out.`); } }
+  if(R.topClientes.length>=5){ const t5=R.topClientes.slice(0,5).reduce((s,c)=>s+c.v,0), t15=R.topClientes.slice(0,15).reduce((s,c)=>s+c.v,0);
+    ger.push(`Concentração: os 5 maiores clientes valem ${(t5/tot*100).toFixed(0)}% e os 15 maiores ${(t15/tot*100).toFixed(0)}% do sell out.`);
+    if(t5/tot>=0.4) opp.push(`Faturamento concentrado nos 5 maiores clientes (${(t5/tot*100).toFixed(0)}%): vale desenvolver a base intermediária para reduzir a dependência.`); }
+  const pp=R.perProd.filter(p=>p.clientes>0);
+  if(pp.length>1){ const thr=Math.max(3,Math.round(R.dist*0.05)); const cand=pp.filter(p=>p.clientes>=thr); const base=cand.length?cand:pp;
+    const tkt=base.slice().sort((a,b)=>b.ticket-a.ticket)[0]; const reach=pp.slice().sort((a,b)=>b.clientes-a.clientes)[0]; const val=pp.slice().sort((a,b)=>b.v-a.v)[0];
+    if(tkt&&reach&&tkt.codigo!==reach.codigo) opp.push(`${trunc(tkt.descricao,36)} vende para menos lojas (${numFmt(tkt.clientes)}) mas fatura mais por cliente (${brl(tkt.ticket)}) — produto de alto valor; já ${trunc(reach.descricao,36)} tem o maior alcance (${numFmt(reach.clientes)} lojas), com ticket de ${brl(reach.ticket)}.`);
+    if(val) opp.push(`Carro-chefe: ${trunc(val.descricao,36)} responde por ${(val.v/tot*100).toFixed(0)}% do sell out, presente em ${numFmt(val.clientes)} lojas.`);
+    const lowF=pp.filter(p=>p.clientes>=thr && p.freq>0 && p.freq<(n>=3?1.6:1.1)).sort((a,b)=>b.clientes-a.clientes)[0];
+    if(lowF) opp.push(`${trunc(lowF.descricao,36)} está em ${numFmt(lowF.clientes)} lojas mas com recompra baixa (${lowF.freq.toFixed(1)} meses/cliente): boa distribuição, foco agora em giro e reposição.`);
+    const niche=pp.filter(p=>p.clientes>0 && p.clientes<R.dist*0.4 && p.ticket>=(R.dist?R.valor/R.dist:0)).sort((a,b)=>b.ticket-a.ticket)[0];
+    if(niche) opp.push(`${trunc(niche.descricao,36)} tem ticket alto (${brl(niche.ticket)}/cliente) e ainda baixa penetração (${numFmt(niche.clientes)} lojas): oportunidade de ampliar a distribuição.`);
+  }
+  if(!opp.length) opp.push('Desempenho equilibrado entre distribuição, recompra e mix de produtos no período.');
+  return {ger,opp};
 }
 
 async function criarApresentacao(){
@@ -462,18 +498,18 @@ async function criarApresentacao(){
     if(LOGO_BRANCO===null) LOGO_BRANCO=await toDataURL('assets/ferretti-branco.png');
     if(LOGO_AZUL===null)   LOGO_AZUL=await toDataURL('assets/ferretti-azul.png');
     const [i0,i1]=getRange();
-    const agg=aggregate(CTX.prods,i0,i1);
+    const agg=aggregate(CTX.prods,i0,i1);   // série + fullV para o comparativo YoY
     let prev=null; if(YOY){ prev=[]; for(let i=i0;i<=i1;i++) prev.push(i-12>=0?agg.fullV[i-12]:null); }
+    const R=aggregateRich(CTX.prods,i0,i1);
     const intersect=(CTX.mode==='selecao'&&CTX.prods.length>1);
     const setores=buildSetores(CTX.prods,intersect,i0,i1);
-    const prodRows=(CTX.mode!=='produto')?buildProdRows(i0,i1):null;
-    const insights=gerarInsights(agg,agg.serie,prev,prodRows,setores,i0,i1);
-    await montarPptx(agg,agg.serie,prev,setores,prodRows,insights,i0,i1);
+    const analise=gerarAnalise(R,prev,i0,i1);
+    await montarPptx(R,prev,setores,analise,i0,i1);
   }catch(e){ console.error(e); alert('Não consegui gerar a apresentação: '+(e&&e.message?e.message:e)); }
   finally{ pptBtn.classList.remove('busy'); pptBtn.disabled=false; pptBtn.textContent=orig; }
 }
 
-async function montarPptx(agg,serie,prev,setores,prodRows,insights,i0,i1){
+async function montarPptx(R,prev,setores,analise,i0,i1){
   const pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE'; pptx.author='M. Ferretti Distribuidora'; pptx.company='M. Ferretti';
   const periodo=mesLabel(MESES[i0])+' a '+mesLabel(MESES[i1]);
   const escopo=(ACC&&ACC.escopo&&ACC.escopo!=='todos')?(ACC.escopo==='regional'?('Regional '+ACC.valor):('Setor '+ACC.valor)):'Visão geral';
@@ -483,99 +519,130 @@ async function montarPptx(agg,serie,prev,setores,prodRows,insights,i0,i1){
   const coverSub   = CTX.mode==='marca' ? ('Marca '+marcaCode+' · '+CTX.prods.length+' produtos')
                     : CTX.mode==='selecao' ? (CTX.prods.length+' produto(s) selecionado(s)')
                     : ('Código: '+(CTX.sub||'').replace('Código: ',''));
+  const isMulti = CTX.mode!=='produto';
 
   pptx.defineSlideMaster({title:'M',background:{color:'FFFFFF'},
     objects:[{rect:{x:0,y:7.16,w:'100%',h:0.012,fill:{color:PPT.LINE}}},
-      {text:{text:'M. Ferretti Distribuidora · Acompanhamento de lançamentos · Uso interno',options:{x:0.5,y:7.04,w:9,h:0.3,fontSize:8,color:PPT.MUTED,fontFace:PPT.FONT}}}],
+      {text:{text:'M. Ferretti Distribuidora · '+coverTitle+' · Uso interno',options:{x:0.5,y:7.04,w:10,h:0.3,fontSize:8,color:PPT.MUTED,fontFace:PPT.FONT}}}],
     slideNumber:{x:12.55,y:7.04,w:0.6,h:0.3,fontSize:8,color:PPT.MUTED,fontFace:PPT.FONT}});
 
   function addTitle(s,title,sub){
-    s.addText(title,{x:0.5,y:0.42,w:12,h:0.6,fontSize:25,bold:true,color:PPT.INK,fontFace:PPT.FONT});
-    if(sub) s.addText(sub,{x:0.5,y:1.0,w:12,h:0.4,fontSize:13,color:PPT.MUTED,fontFace:PPT.FONT});
-    s.addShape(pptx.ShapeType.rect,{x:0.5,y:1.42,w:0.85,h:0.06,fill:{color:PPT.VERDE}});
+    s.addText(title,{x:0.5,y:0.4,w:12.3,h:0.6,fontSize:24,bold:true,color:PPT.INK,fontFace:PPT.FONT});
+    if(sub) s.addText(sub,{x:0.5,y:0.98,w:12.3,h:0.4,fontSize:12.5,color:PPT.MUTED,fontFace:PPT.FONT});
+    s.addShape(pptx.ShapeType.rect,{x:0.5,y:1.4,w:0.85,h:0.06,fill:{color:PPT.VERDE}});
   }
+  const HC=c=>({bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:10.5,fontFace:PPT.FONT,align:c||'left',valign:'middle'});
+  const CELL=(bg,extra)=>Object.assign({fontSize:9.5,fill:{color:bg},fontFace:PPT.FONT,valign:'middle',color:PPT.INK},extra||{});
 
   /* --- Capa --- */
   let s=pptx.addSlide(); s.background={color:PPT.AZULD};
   s.addShape(pptx.ShapeType.ellipse,{x:10.0,y:-1.8,w:5.0,h:5.0,fill:{color:PPT.AZUL},line:{type:'none'}});
   s.addShape(pptx.ShapeType.ellipse,{x:11.7,y:4.7,w:3.2,h:3.2,fill:{color:PPT.AZUL2},line:{type:'none'}});
   if(LOGO_BRANCO) s.addImage({data:LOGO_BRANCO,x:0.6,y:0.55,w:2.5,sizing:{type:'contain',w:2.5,h:0.62}});
-  s.addText('APRESENTAÇÃO AO FORNECEDOR',{x:0.62,y:2.25,w:10,h:0.4,fontSize:13,bold:true,color:PPT.CINZA,charSpacing:2,fontFace:PPT.FONT});
-  s.addText(coverTitle,{x:0.6,y:2.75,w:11.5,h:1.5,fontSize:40,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
-  s.addText(coverSub,{x:0.62,y:4.35,w:11.5,h:0.6,fontSize:17,color:PPT.LILAS,fontFace:PPT.FONT});
+  s.addText('APRESENTAÇÃO AO FORNECEDOR',{x:0.62,y:2.15,w:10,h:0.4,fontSize:13,bold:true,color:PPT.CINZA,charSpacing:2,fontFace:PPT.FONT});
+  s.addText(coverTitle,{x:0.6,y:2.62,w:11.5,h:1.4,fontSize:40,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
+  s.addText('Sell out, distribuição e positivação · '+coverSub,{x:0.62,y:4.2,w:11.5,h:0.6,fontSize:16,color:PPT.LILAS,fontFace:PPT.FONT});
   s.addText([{text:'Período: ',options:{bold:true}},{text:periodo,options:{}},{text:'      Acesso: ',options:{bold:true}},{text:escopo,options:{}},{text:'      Atualizado em ',options:{bold:true}},{text:P.meta.atualizadoEm,options:{}}],
     {x:0.62,y:6.4,w:12,h:0.4,fontSize:11,color:PPT.LILAS,fontFace:PPT.FONT});
 
-  /* --- Resumo executivo (KPIs) --- */
-  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Resumo executivo',coverTitle+' · '+periodo);
-  const kpis=[['DISTRIBUIÇÃO',numFmt(agg.dist)+' lojas',PPT.AZUL],['POSITIVAÇÃO MÉDIA',numFmt(agg.posMedia)+' /mês',PPT.AZUL],
-    ['VALOR NO PERÍODO',brl(agg.valor),PPT.VERDE],['QUANTIDADE',numFmt(agg.qtd)+' un',PPT.AZUL]];
-  const cw=2.86, gap=0.27, x0=0.55, ky=1.85, kh=1.55;
-  kpis.forEach((k,i)=>{ const x=x0+i*(cw+gap);
-    s.addShape(pptx.ShapeType.roundRect,{x,y:ky,w:cw,h:kh,rectRadius:0.1,fill:{color:'FFFFFF'},line:{color:PPT.LINE,width:1},shadow:{type:'outer',color:'B8C0D8',opacity:0.45,blur:8,offset:3,angle:90}});
-    s.addText(k[0],{x:x+0.12,y:ky+0.18,w:cw-0.24,h:0.35,fontSize:10,bold:true,color:PPT.MUTED,charSpacing:1,fontFace:PPT.FONT});
-    s.addText(k[1],{x:x+0.12,y:ky+0.6,w:cw-0.24,h:0.7,fontSize:21,bold:true,color:k[2],fontFace:PPT.FONT,valign:'top'}); });
-  const prodLbl=CTX.mode==='marca'?(CTX.prods.length+' produtos na marca'):CTX.mode==='selecao'?(CTX.prods.length+' produto(s) selecionado(s)'):'Produto individual';
-  s.addShape(pptx.ShapeType.roundRect,{x:x0,y:3.7,w:cw*4+gap*3,h:2.7,rectRadius:0.08,fill:{color:'F4F6FB'},line:{color:PPT.LINE,width:1}});
-  s.addText('Destaque',{x:x0+0.3,y:3.95,w:11,h:0.35,fontSize:12,bold:true,color:PPT.VERDE,charSpacing:1,fontFace:PPT.FONT});
-  s.addText([{text:insights[0]+'\n',options:{breakLine:true}}].concat((prev&&insights[insights.length-1].startsWith('Vs.')?[{text:insights[insights.length-1]+'\n',options:{breakLine:true}}]:[]),
-    [{text:prodLbl,options:{color:PPT.MUTED}}]),
-    {x:x0+0.3,y:4.35,w:cw*4+gap*3-0.6,h:1.9,fontSize:15,color:PPT.INK,fontFace:PPT.FONT,valign:'top',lineSpacingMultiple:1.15});
+  /* --- Panorama (KPIs) --- */
+  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Panorama do período',coverTitle+' · '+periodo);
+  const kpis=[['SELL OUT NO PERÍODO',brl(R.valor),PPT.VERDE],['ITENS VENDIDOS',numFmt(R.qtd)+' un',PPT.AZUL],['COBERTURA',numFmt(R.dist)+' lojas',PPT.AZUL],
+    ['POSITIVAÇÕES',numFmt(R.positivacoes),PPT.AZUL],['POSITIVAÇÃO MÉDIA',numFmt(R.posMedia)+'/mês',PPT.AZUL],['TICKET MÉDIO/LOJA',brl(R.dist?R.valor/R.dist:0),PPT.AZUL]];
+  const cw=3.91,gap=0.3,x0=0.55;
+  kpis.forEach((k,i)=>{ const col=i%3,row=Math.floor(i/3); const x=x0+col*(cw+gap),y=1.75+row*1.65;
+    s.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:1.45,rectRadius:0.09,fill:{color:'FFFFFF'},line:{color:PPT.LINE,width:1},shadow:{type:'outer',color:'B8C0D8',opacity:0.4,blur:7,offset:3,angle:90}});
+    s.addText(k[0],{x:x+0.18,y:y+0.18,w:cw-0.36,h:0.35,fontSize:10,bold:true,color:PPT.MUTED,charSpacing:1,fontFace:PPT.FONT});
+    s.addText(k[1],{x:x+0.18,y:y+0.58,w:cw-0.36,h:0.6,fontSize:20,bold:true,color:k[2],fontFace:PPT.FONT,valign:'top'}); });
+  s.addShape(pptx.ShapeType.roundRect,{x:x0,y:5.15,w:cw*3+gap*2,h:1.6,rectRadius:0.08,fill:{color:'F4F6FB'},line:{color:PPT.LINE,width:1}});
+  s.addText('Destaque',{x:x0+0.3,y:5.35,w:11,h:0.3,fontSize:11,bold:true,color:PPT.VERDE,charSpacing:1,fontFace:PPT.FONT});
+  s.addText(analise.ger.slice(0,2).map(t=>({text:t,options:{breakLine:true,paraSpaceAfter:6,fontFace:PPT.FONT}})),
+    {x:x0+0.3,y:5.68,w:cw*3+gap*2-0.6,h:1.0,fontSize:13,color:PPT.INK,valign:'top',lineSpacingMultiple:1.1});
 
-  /* --- Evolução mensal (gráfico) --- */
-  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Evolução mensal', prev?'Valor vendido — ano atual vs. ano anterior':'Valor vendido e clientes distintos por mês');
-  const labels=serie.map(x=>mesLabel(x.m)), vals=serie.map(x=>Math.round(x.v)), cls=serie.map(x=>x.c);
-  if(prev){
-    s.addChart(pptx.ChartType.bar,[{name:'Ano atual',labels,values:vals},{name:'Ano anterior',labels,values:prev.map(x=>Math.round(x||0))}],
-      {x:0.5,y:1.7,w:12.3,h:4.9,barGrouping:'clustered',chartColors:[PPT.AZUL,PPT.OURO],showLegend:true,legendPos:'b',legendFontSize:11,
-       valAxisLabelFormatCode:'#,##0',catAxisLabelFontSize:9,valAxisLabelFontSize:9});
+  /* --- Distribuição no período + por produto --- */
+  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Distribuição no período', numFmt(R.dist)+' lojas atendidas · '+numFmt(R.positivacoes)+' positivações (produto × loja)');
+  if(isMulti){
+    const dpp=R.perProd.filter(p=>p.clientes>0).sort((a,b)=>b.clientes-a.clientes).slice(0,12);
+    const L=dpp.map(p=>trunc(p.descricao,28)).reverse(), V=dpp.map(p=>p.clientes).reverse();
+    s.addText('Distribuição por produto (nº de lojas)',{x:0.5,y:1.58,w:12,h:0.35,fontSize:13,bold:true,color:PPT.INK,fontFace:PPT.FONT});
+    s.addChart(pptx.ChartType.bar,[{name:'Lojas',labels:L,values:V}],{x:0.4,y:2.0,w:12.5,h:4.7,barDir:'bar',chartColors:[PPT.AZUL],showValue:true,dataLabelColor:'363636',dataLabelFontSize:8,dataLabelPosition:'outEnd',catAxisLabelFontSize:8.5,valAxisHidden:true,showLegend:false,barGapWidthPct:40});
   } else {
-    s.addChart([
-      {type:pptx.ChartType.bar, data:[{name:'Valor (R$)',labels,values:vals}], options:{chartColors:[PPT.AZUL]}},
-      {type:pptx.ChartType.line,data:[{name:'Clientes',labels,values:cls}], options:{chartColors:[PPT.VERDE],secondaryValAxis:true,secondaryCatAxis:true,lineSize:3,lineDataSymbol:'circle',lineDataSymbolSize:6}}
-    ],{x:0.5,y:1.7,w:12.3,h:4.9,showLegend:true,legendPos:'b',legendFontSize:11,
-       valAxes:[{showValAxisTitle:true,valAxisTitle:'Valor (R$)',valAxisTitleFontSize:10,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9},{showValAxisTitle:true,valAxisTitle:'Clientes',valAxisTitleFontSize:10,valAxisLabelFontSize:9}],
-       catAxes:[{catAxisLabelFontSize:9},{catAxisHidden:true}]});
+    const L=setores.slice(0,12).map(g=>trunc(g.nome,22)).reverse(), V=setores.slice(0,12).map(g=>g.clientes).reverse();
+    s.addText('Lojas por setor',{x:0.5,y:1.58,w:12,h:0.35,fontSize:13,bold:true,color:PPT.INK,fontFace:PPT.FONT});
+    s.addChart(pptx.ChartType.bar,[{name:'Lojas',labels:L,values:V}],{x:0.4,y:2.0,w:12.5,h:4.7,barDir:'bar',chartColors:[PPT.AZUL],showValue:true,dataLabelColor:'363636',dataLabelFontSize:8,dataLabelPosition:'outEnd',catAxisLabelFontSize:8.5,valAxisHidden:true,showLegend:false});
   }
 
-  /* --- Análise --- */
-  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Análise','Leitura dos números do período');
-  s.addText(insights.map(t=>({text:t,options:{bullet:{code:'2022',indent:18},color:PPT.INK,fontSize:15,paraSpaceAfter:12,breakLine:true,fontFace:PPT.FONT}})),
-    {x:0.7,y:1.75,w:12.0,h:5.1,valign:'top',lineSpacingMultiple:1.1});
+  /* --- Positivação mês a mês + média --- */
+  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Positivação mês a mês','Clientes distintos por mês · média de '+numFmt(R.posMedia)+' clientes/mês');
+  { const L=R.serie.map(x=>mesLabel(x.m)), Cl=R.serie.map(x=>x.c), AV=R.serie.map(()=>R.posMedia);
+    s.addChart([
+      {type:pptx.ChartType.bar, data:[{name:'Clientes no mês',labels:L,values:Cl}], options:{chartColors:[PPT.AZUL]}},
+      {type:pptx.ChartType.line,data:[{name:'Média ('+numFmt(R.posMedia)+')',labels:L,values:AV}], options:{chartColors:[PPT.OURO],lineSize:2,lineDash:'dash',lineDataSymbol:'none'}}
+    ],{x:0.5,y:1.7,w:12.3,h:4.7,showLegend:true,legendPos:'b',legendFontSize:11,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9,catAxisLabelFontSize:9});
+  }
 
-  /* --- Principais produtos --- */
-  if(prodRows && prodRows.length){
-    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Principais produtos','Top '+Math.min(10,prodRows.length)+' por valor no período');
-    const th=t=>({text:t,options:{bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:11,fontFace:PPT.FONT,valign:'middle'}});
-    const rows=[[th('Produto'),th('Código'),{...th('Lojas'),options:{...th('').options,align:'right'}},{...th('Qtd'),options:{...th('').options,align:'right'}},{...th('Valor'),options:{...th('').options,align:'right'}}]];
-    prodRows.slice(0,10).forEach((r,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF';
-      rows.push([
-        {text:r.descricao,options:{fontSize:10,color:PPT.INK,fill:{color:bg},fontFace:PPT.FONT}},
-        {text:r.codigo,options:{fontSize:10,color:PPT.MUTED,fill:{color:bg},fontFace:PPT.FONT}},
-        {text:numFmt(r.clientes),options:{fontSize:10,align:'right',fill:{color:bg},fontFace:PPT.FONT}},
-        {text:numFmt(r.q),options:{fontSize:10,align:'right',fill:{color:bg},fontFace:PPT.FONT}},
-        {text:brl(r.v),options:{fontSize:10,align:'right',bold:true,color:PPT.INK,fill:{color:bg},fontFace:PPT.FONT}}]); });
-    s.addTable(rows,{x:0.5,y:1.65,w:12.33,colW:[5.6,2.6,1.3,1.4,1.83],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.36,valign:'middle'});
+  /* --- Sell out mês a mês + total --- */
+  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Sell out mês a mês', prev?('Ano atual vs. ano anterior · total no período: '+brl(R.valor)):('Total no período: '+brl(R.valor)));
+  { const L=R.serie.map(x=>mesLabel(x.m)), V=R.serie.map(x=>Math.round(x.v));
+    if(prev){ const PV=prev.map(x=>Math.round(x||0));
+      s.addChart(pptx.ChartType.bar,[{name:'Ano atual',labels:L,values:V},{name:'Ano anterior',labels:L,values:PV}],
+        {x:0.5,y:1.7,w:12.3,h:4.7,barGrouping:'clustered',chartColors:[PPT.AZUL,PPT.OURO],showLegend:true,legendPos:'b',valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9,catAxisLabelFontSize:9});
+    } else { let acc=0; const C=R.serie.map(x=>{acc+=x.v; return Math.round(acc);});
+      s.addChart([
+        {type:pptx.ChartType.bar, data:[{name:'Sell out (R$)',labels:L,values:V}], options:{chartColors:[PPT.AZUL]}},
+        {type:pptx.ChartType.line,data:[{name:'Acumulado',labels:L,values:C}], options:{chartColors:[PPT.VERDE],secondaryValAxis:true,secondaryCatAxis:true,lineSize:3,lineDataSymbol:'circle',lineDataSymbolSize:6}}
+      ],{x:0.5,y:1.7,w:12.3,h:4.7,showLegend:true,legendPos:'b',legendFontSize:11,
+         valAxes:[{showValAxisTitle:true,valAxisTitle:'Sell out mensal (R$)',valAxisTitleFontSize:10,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9},{showValAxisTitle:true,valAxisTitle:'Acumulado (R$)',valAxisTitleFontSize:10,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9}],
+         catAxes:[{catAxisLabelFontSize:9},{catAxisHidden:true}]});
+    }
+  }
+
+  /* --- Venda por produto (tabela) --- */
+  if(isMulti){
+    const vp=R.perProd.filter(p=>p.v>0).sort((a,b)=>b.v-a.v); const top=vp.slice(0,15);
+    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Venda por produto','Top '+top.length+' por sell out · ticket = R$/cliente · freq = meses comprados/cliente');
+    const rows=[[ {text:'Produto',options:HC()},{text:'Lojas',options:HC('right')},{text:'Itens',options:HC('right')},{text:'Sell out',options:HC('right')},{text:'Ticket/cli',options:HC('right')},{text:'Freq',options:HC('right')} ]];
+    let tQ=0,tV=0; vp.forEach(p=>{tQ+=p.q;tV+=p.v;});
+    top.forEach((p,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF';
+      rows.push([ {text:trunc(p.descricao,40),options:CELL(bg)},{text:numFmt(p.clientes),options:CELL(bg,{align:'right'})},{text:numFmt(p.q),options:CELL(bg,{align:'right'})},
+        {text:brl(p.v),options:CELL(bg,{align:'right',bold:true})},{text:brl(p.ticket),options:CELL(bg,{align:'right',color:PPT.MUTED})},{text:p.freq.toFixed(1),options:CELL(bg,{align:'right',color:PPT.MUTED})} ]); });
+    const tf={bold:true,fill:{color:'E8EBFF'},fontSize:9.5,color:PPT.INK,fontFace:PPT.FONT};
+    rows.push([ {text:'TOTAL ('+vp.length+' produtos)',options:tf},{text:'',options:tf},{text:numFmt(tQ),options:Object.assign({align:'right'},tf)},{text:brl(tV),options:Object.assign({align:'right'},tf)},{text:'',options:tf},{text:'',options:tf} ]);
+    s.addTable(rows,{x:0.5,y:1.6,w:12.33,colW:[4.9,1.25,1.55,2.0,1.75,0.88],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.3,valign:'middle'});
+  }
+
+  /* --- Top 15 clientes --- */
+  if(R.topClientes.length){
+    const tc=R.topClientes.slice(0,15); const tot=R.valor||1; const sh=tc.reduce((a,c)=>a+c.v,0)/tot*100;
+    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Top 15 clientes','Maiores compradores no período · representam '+sh.toFixed(0)+'% do sell out');
+    const rows=[[ {text:'#',options:HC('center')},{text:'Cliente',options:HC()},{text:'Setor',options:HC()},{text:'Prod.',options:HC('right')},{text:'Freq',options:HC('right')},{text:'Itens',options:HC('right')},{text:'Sell out',options:HC('right')} ]];
+    tc.forEach((c,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF';
+      rows.push([ {text:String(idx+1),options:CELL(bg,{align:'center',color:PPT.MUTED})},{text:trunc(c.nome,34),options:CELL(bg)},{text:trunc(c.setor,18),options:CELL(bg,{color:PPT.MUTED})},
+        {text:numFmt(c.nprod),options:CELL(bg,{align:'right'})},{text:String(c.meses),options:CELL(bg,{align:'right',color:PPT.MUTED})},{text:numFmt(c.q),options:CELL(bg,{align:'right'})},{text:brl(c.v),options:CELL(bg,{align:'right',bold:true})} ]); });
+    s.addTable(rows,{x:0.5,y:1.6,w:12.33,colW:[0.5,4.25,2.35,0.95,0.95,1.4,1.93],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.3,valign:'middle'});
   }
 
   /* --- Distribuição por setor --- */
-  if(setores.length){
-    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Distribuição por setor', (escopo==='Visão geral'?'Setores e regionais atendidos no período':escopo+' · no período'));
-    const th=t=>({text:t,options:{bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:11,fontFace:PPT.FONT}});
-    const rows=[[th('Setor'),th('Regional'),{...th('Clientes'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:11,fontFace:PPT.FONT,align:'right'}},{...th('Qtd'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:11,fontFace:PPT.FONT,align:'right'}},{...th('Valor'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:11,fontFace:PPT.FONT,align:'right'}}]];
+  if(setores.length && isMulti){
+    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Distribuição por setor', escopo==='Visão geral'?'Setores e regionais atendidos no período':escopo+' · no período');
+    const rows=[[ {text:'Setor',options:HC()},{text:'Regional',options:HC()},{text:'Clientes',options:HC('right')},{text:'Itens',options:HC('right')},{text:'Sell out',options:HC('right')} ]];
     let tC=0,tQ=0,tV=0;
-    setores.slice(0,12).forEach((g,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF'; tC+=g.clientes; tQ+=g.q; tV+=g.v;
-      rows.push([
-        {text:g.nome,options:{fontSize:10,color:PPT.INK,fill:{color:bg},fontFace:PPT.FONT}},
-        {text:SETOR_REGIONAL[g.nome]||'—',options:{fontSize:10,color:PPT.MUTED,fill:{color:bg},fontFace:PPT.FONT}},
-        {text:numFmt(g.clientes),options:{fontSize:10,align:'right',fill:{color:bg},fontFace:PPT.FONT}},
-        {text:numFmt(g.q),options:{fontSize:10,align:'right',fill:{color:bg},fontFace:PPT.FONT}},
-        {text:brl(g.v),options:{fontSize:10,align:'right',bold:true,color:PPT.INK,fill:{color:bg},fontFace:PPT.FONT}}]); });
-    const tf={bold:true,fill:{color:'E8EBFF'},fontSize:10,color:PPT.INK,fontFace:PPT.FONT};
-    rows.push([{text:setores.length>12?('TOTAL (top 12 de '+setores.length+')'):'TOTAL',options:tf},{text:'',options:tf},
-      {text:numFmt(tC),options:{...tf,align:'right'}},{text:numFmt(tQ),options:{...tf,align:'right'}},{text:brl(tV),options:{...tf,align:'right'}}]);
-    s.addTable(rows,{x:0.5,y:1.65,w:12.33,colW:[4.5,2.6,1.6,1.6,2.03],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.34,valign:'middle'});
+    setores.slice(0,12).forEach((g,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF'; tC+=g.clientes;tQ+=g.q;tV+=g.v;
+      rows.push([ {text:g.nome,options:CELL(bg)},{text:SETOR_REGIONAL[g.nome]||'—',options:CELL(bg,{color:PPT.MUTED})},{text:numFmt(g.clientes),options:CELL(bg,{align:'right'})},{text:numFmt(g.q),options:CELL(bg,{align:'right'})},{text:brl(g.v),options:CELL(bg,{align:'right',bold:true})} ]); });
+    const tf={bold:true,fill:{color:'E8EBFF'},fontSize:9.5,color:PPT.INK,fontFace:PPT.FONT};
+    rows.push([ {text:setores.length>12?('TOTAL (top 12 de '+setores.length+')'):'TOTAL',options:tf},{text:'',options:tf},{text:numFmt(tC),options:Object.assign({align:'right'},tf)},{text:numFmt(tQ),options:Object.assign({align:'right'},tf)},{text:brl(tV),options:Object.assign({align:'right'},tf)} ]);
+    s.addTable(rows,{x:0.5,y:1.65,w:12.33,colW:[4.5,2.6,1.6,1.6,2.03],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.32,valign:'middle'});
   }
+
+  /* --- Análise do período --- */
+  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Análise do período','Leitura dos números');
+  s.addText(analise.ger.map(t=>({text:t,options:{bullet:{code:'2022',indent:18},color:PPT.INK,fontSize:14.5,paraSpaceAfter:11,breakLine:true,fontFace:PPT.FONT}})),
+    {x:0.7,y:1.7,w:12,h:5.1,valign:'top',lineSpacingMultiple:1.08});
+
+  /* --- Oportunidades & destaques por produto --- */
+  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Destaques por produto & oportunidades','Onde acelerar com o fornecedor');
+  s.addText(analise.opp.map(t=>({text:t,options:{bullet:{code:'25B8',indent:20},color:PPT.INK,fontSize:14.5,paraSpaceAfter:12,breakLine:true,fontFace:PPT.FONT}})),
+    {x:0.7,y:1.7,w:12,h:5.1,valign:'top',lineSpacingMultiple:1.08});
 
   /* --- Encerramento --- */
   s=pptx.addSlide(); s.background={color:PPT.AZULD};
