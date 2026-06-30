@@ -422,9 +422,21 @@ function applyDeepLink(){ if(mi&&porMarca[mi.toUpperCase()]){ setMode('marca'); 
 
 /* ===== Apresentação (.pptx) — gerada no navegador via PptxGenJS ===== */
 const PPT={AZUL:'2B2FA8',AZULD:'1C1F78',AZUL2:'3A3FD0',VERDE:'28A745',OURO:'F5B942',INK:'16182E',MUTED:'6B6F8A',LINE:'E7EAF3',CINZA:'AEB4FF',LILAS:'D4D7FF',FONT:'Segoe UI'};
-let LOGO_BRANCO=null, LOGO_AZUL=null;
+/* Marca -> [cor de acento (hex s/ #), arquivo do logo] — sincronizado com a skill catalogo-apresentacao */
+const MARCA_BRAND={ AER:['00833e','aeroflex.png'], BAB:['3aa0d1','baruel.png'], BEL:['e6007e','bellacoton.png'], BRI:['c8102e','brics.png'],
+  CLO:['2e7d32','cloy.png'], CRE:['e6007e','bellacoton.png'], DEN:['0067b1','dentics.png'], FAR:['00857c','farnese.png'], GAL:['1b3a6b','galaxy.png'],
+  KIN:['b8860b','king.png'], LEI:['e5447d','leite-de-rosas.png'], MUL:['ee7203','multionic.png'], NAT:['2e9e4f','nathan.png'], PRU:['222222','prudence.png'],
+  SEM:['1d5d99','semorin.png'], SHO:['d52b1e','superfine.png'], SUS:['0072bc','sussex.png'], TEC:['f0a500','techluz.png'], TEN:['0a7d4d','baruel.png'],
+  TENW:['0a7d4d','baruel.png'], UNI:['ee7203','multionic.png'], WHI:['00a7e1','orbi.png'], YAM:['c8102e','yama.png'] };
+function darkenHex(hex,f){ const n=parseInt(hex,16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; r=Math.round(r*f);g=Math.round(g*f);b=Math.round(b*f); return ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+function mixWhite(hex,t){ const n=parseInt(hex,16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; r=Math.round(r+(255-r)*t);g=Math.round(g+(255-g)*t);b=Math.round(b+(255-b)*t); return ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+// Marca da apresentação atual: modo marca, ou seleção/produto com uma única marca
+function brandAtual(){ let code = CTX.mode==='marca' ? CTX.badge.replace('MARCA ','').trim() : (new Set(CTX.prods.map(p=>p.marca)).size===1 ? CTX.prods[0].marca : null);
+  if(code && MARCA_BRAND[code]) return {code,accent:MARCA_BRAND[code][0],logo:MARCA_BRAND[code][1]}; return null; }
+let LOGO_BRANCO=null, LOGO_AZUL=null; const LOGO_MARCA_CACHE={};
 async function toDataURL(url){ try{ const r=await fetch(url); if(!r.ok) return null; const b=await r.blob();
   return await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>res(null); fr.readAsDataURL(b); }); }catch(e){ return null; } }
+async function logoDaMarca(file){ if(!file) return null; if(LOGO_MARCA_CACHE[file]!==undefined) return LOGO_MARCA_CACHE[file]; const d=await toDataURL('assets/marcas/'+file); LOGO_MARCA_CACHE[file]=d; return d; }
 
 function trunc(s,n){ s=s||''; return s.length>n? s.slice(0,n-1)+'…' : s; }
 
@@ -521,12 +533,14 @@ async function criarApresentacao(){
     const intersect=(CTX.mode==='selecao'&&CTX.prods.length>1);
     const setores=buildSetores(CTX.prods,intersect,i0,i1);
     const analise=gerarAnalise(R,prev,i0,i1);
-    await montarPptx(R,prev,setores,analise,i0,i1);
+    const brand=brandAtual();
+    const logoMarca=brand?await logoDaMarca(brand.logo):null;
+    await montarPptx(R,prev,setores,analise,i0,i1,brand,logoMarca);
   }catch(e){ console.error(e); alert('Não consegui gerar a apresentação: '+(e&&e.message?e.message:e)); }
   finally{ pptBtn.classList.remove('busy'); pptBtn.disabled=false; pptBtn.textContent=orig; }
 }
 
-async function montarPptx(R,prev,setores,analise,i0,i1){
+async function montarPptx(R,prev,setores,analise,i0,i1,brand,logoMarca){
   const pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE'; pptx.author='M. Ferretti Distribuidora'; pptx.company='M. Ferretti';
   const periodo=mesLabel(MESES[i0])+' a '+mesLabel(MESES[i1]);
   const escopo=(ACC&&ACC.escopo&&ACC.escopo!=='todos')?(ACC.escopo==='regional'?('Regional '+ACC.valor):('Setor '+ACC.valor)):'Visão geral';
@@ -538,41 +552,51 @@ async function montarPptx(R,prev,setores,analise,i0,i1){
                     : ('Código: '+(CTX.sub||'').replace('Código: ',''));
   const isMulti = CTX.mode!=='produto';
 
+  /* Cores do FORNECEDOR (com fallback no azul Ferretti) */
+  const ACCENT  = brand ? brand.accent : PPT.AZUL;
+  const ACCENTD = brand ? darkenHex(brand.accent,0.50) : PPT.AZULD;
+  const ACCENT2 = brand ? mixWhite(brand.accent,0.22) : PPT.AZUL2;
+  const LINEC   = '404040';  // cor neutra das linhas (contrasta com qualquer cor de marca)
+
   pptx.defineSlideMaster({title:'M',background:{color:'FFFFFF'},
     objects:[{rect:{x:0,y:7.16,w:'100%',h:0.012,fill:{color:PPT.LINE}}},
       {text:{text:'M. Ferretti Distribuidora · '+coverTitle+' · Uso interno',options:{x:0.5,y:7.04,w:10,h:0.3,fontSize:8,color:PPT.MUTED,fontFace:PPT.FONT}}}],
     slideNumber:{x:12.55,y:7.04,w:0.6,h:0.3,fontSize:8,color:PPT.MUTED,fontFace:PPT.FONT}});
 
   function addTitle(s,title,sub){
-    s.addText(title,{x:0.5,y:0.4,w:12.3,h:0.6,fontSize:24,bold:true,color:PPT.INK,fontFace:PPT.FONT});
-    if(sub) s.addText(sub,{x:0.5,y:0.98,w:12.3,h:0.4,fontSize:12.5,color:PPT.MUTED,fontFace:PPT.FONT});
-    s.addShape(pptx.ShapeType.rect,{x:0.5,y:1.4,w:0.85,h:0.06,fill:{color:PPT.VERDE}});
+    const tw = logoMarca ? 10.4 : 12.3;
+    s.addText(title,{x:0.5,y:0.4,w:tw,h:0.6,fontSize:24,bold:true,color:PPT.INK,fontFace:PPT.FONT});
+    if(sub) s.addText(sub,{x:0.5,y:0.98,w:tw,h:0.4,fontSize:12.5,color:PPT.MUTED,fontFace:PPT.FONT});
+    s.addShape(pptx.ShapeType.rect,{x:0.5,y:1.4,w:0.85,h:0.06,fill:{color:ACCENT}});
+    if(logoMarca) s.addImage({data:logoMarca,x:11.25,y:0.32,w:1.6,sizing:{type:'contain',w:1.6,h:0.7}});
   }
-  const HC=c=>({bold:true,color:'FFFFFF',fill:{color:PPT.AZUL},fontSize:10.5,fontFace:PPT.FONT,align:c||'left',valign:'middle'});
+  const HC=c=>({bold:true,color:'FFFFFF',fill:{color:ACCENT},fontSize:10.5,fontFace:PPT.FONT,align:c||'left',valign:'middle'});
   const CELL=(bg,extra)=>Object.assign({fontSize:9.5,fill:{color:bg},fontFace:PPT.FONT,valign:'middle',color:PPT.INK},extra||{});
 
   /* --- Capa --- */
-  let s=pptx.addSlide(); s.background={color:PPT.AZULD};
-  s.addShape(pptx.ShapeType.ellipse,{x:10.0,y:-1.8,w:5.0,h:5.0,fill:{color:PPT.AZUL},line:{type:'none'}});
-  s.addShape(pptx.ShapeType.ellipse,{x:11.7,y:4.7,w:3.2,h:3.2,fill:{color:PPT.AZUL2},line:{type:'none'}});
+  let s=pptx.addSlide(); s.background={color:ACCENTD};
+  s.addShape(pptx.ShapeType.ellipse,{x:10.4,y:4.4,w:3.8,h:3.8,fill:{color:ACCENT2},line:{type:'none'}});
+  s.addShape(pptx.ShapeType.ellipse,{x:-1.7,y:-1.7,w:3.0,h:3.0,fill:{color:ACCENT},line:{type:'none'}});
   if(LOGO_BRANCO) s.addImage({data:LOGO_BRANCO,x:0.6,y:0.55,w:2.5,sizing:{type:'contain',w:2.5,h:0.62}});
-  s.addText('APRESENTAÇÃO AO FORNECEDOR',{x:0.62,y:2.15,w:10,h:0.4,fontSize:13,bold:true,color:PPT.CINZA,charSpacing:2,fontFace:PPT.FONT});
-  s.addText(coverTitle,{x:0.6,y:2.62,w:11.5,h:1.4,fontSize:40,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
-  s.addText('Sell out, distribuição e positivação · '+coverSub,{x:0.62,y:4.2,w:11.5,h:0.6,fontSize:16,color:PPT.LILAS,fontFace:PPT.FONT});
+  if(logoMarca){ s.addShape(pptx.ShapeType.roundRect,{x:9.55,y:0.5,w:3.2,h:1.15,rectRadius:0.1,fill:{color:'FFFFFF'},line:{type:'none'},shadow:{type:'outer',color:'000000',opacity:0.28,blur:9,offset:3,angle:90}});
+    s.addImage({data:logoMarca,x:9.85,y:0.7,w:2.6,sizing:{type:'contain',w:2.6,h:0.75}}); }
+  s.addText('APRESENTAÇÃO AO FORNECEDOR',{x:0.62,y:2.35,w:10,h:0.4,fontSize:13,bold:true,color:'F0F0F0',charSpacing:2,fontFace:PPT.FONT});
+  s.addText(coverTitle,{x:0.6,y:2.82,w:11.5,h:1.4,fontSize:40,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
+  s.addText('Sell out, distribuição e positivação · '+coverSub,{x:0.62,y:4.4,w:11.5,h:0.6,fontSize:16,color:'EAEAF2',fontFace:PPT.FONT});
   s.addText([{text:'Período: ',options:{bold:true}},{text:periodo,options:{}},{text:'      Acesso: ',options:{bold:true}},{text:escopo,options:{}},{text:'      Atualizado em ',options:{bold:true}},{text:P.meta.atualizadoEm,options:{}}],
-    {x:0.62,y:6.4,w:12,h:0.4,fontSize:11,color:PPT.LILAS,fontFace:PPT.FONT});
+    {x:0.62,y:6.4,w:12,h:0.4,fontSize:11,color:'E2E2EE',fontFace:PPT.FONT});
 
   /* --- Panorama (KPIs) --- */
   s=pptx.addSlide({masterName:'M'}); addTitle(s,'Panorama do período',coverTitle+' · '+periodo);
-  const kpis=[['SELL OUT NO PERÍODO',brl(R.valor),PPT.VERDE],['UNIDADES VENDIDAS',numFmt(R.qtd)+' un',PPT.AZUL],['COBERTURA',numFmt(R.dist)+' lojas',PPT.AZUL],
-    ['TICKET MÉDIO/LOJA',brl(R.dist?R.valor/R.dist:0),PPT.AZUL],['POSITIVAÇÃO MÉDIA',numFmt(R.posMedia)+'/mês',PPT.AZUL],['RECOMPRA MÉDIA',dec1(R.freqMediaCli)+' de '+R.serie.length+' meses',PPT.AZUL]];
+  const kpis=[['SELL OUT NO PERÍODO',brl(R.valor),PPT.VERDE],['UNIDADES VENDIDAS',numFmt(R.qtd)+' un',ACCENT],['COBERTURA',numFmt(R.dist)+' lojas',ACCENT],
+    ['TICKET MÉDIO/LOJA',brl(R.dist?R.valor/R.dist:0),ACCENT],['POSITIVAÇÃO MÉDIA',numFmt(R.posMedia)+'/mês',ACCENT],['RECOMPRA MÉDIA',dec1(R.freqMediaCli)+' de '+R.serie.length+' meses',ACCENT]];
   const cw=3.91,gap=0.3,x0=0.55;
   kpis.forEach((k,i)=>{ const col=i%3,row=Math.floor(i/3); const x=x0+col*(cw+gap),y=1.7+row*1.6;
     s.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:1.4,rectRadius:0.09,fill:{color:'FFFFFF'},line:{color:PPT.LINE,width:1},shadow:{type:'outer',color:'B8C0D8',opacity:0.4,blur:7,offset:3,angle:90}});
     s.addText(k[0],{x:x+0.18,y:y+0.16,w:cw-0.36,h:0.35,fontSize:10,bold:true,color:PPT.MUTED,charSpacing:1,fontFace:PPT.FONT});
     s.addText(k[1],{x:x+0.18,y:y+0.55,w:cw-0.36,h:0.6,fontSize:18,bold:true,color:k[2],fontFace:PPT.FONT,valign:'top'}); });
   s.addShape(pptx.ShapeType.roundRect,{x:x0,y:4.95,w:cw*3+gap*2,h:1.95,rectRadius:0.08,fill:{color:'F4F6FB'},line:{color:PPT.LINE,width:1}});
-  s.addText('Resumo',{x:x0+0.3,y:5.12,w:11,h:0.3,fontSize:11,bold:true,color:PPT.VERDE,charSpacing:1,fontFace:PPT.FONT});
+  s.addText('Resumo',{x:x0+0.3,y:5.12,w:11,h:0.3,fontSize:11,bold:true,color:ACCENT,charSpacing:1,fontFace:PPT.FONT});
   s.addText(analise.resumo.map(t=>({text:t,options:{bullet:{code:'2022',indent:14},breakLine:true,paraSpaceAfter:5,fontFace:PPT.FONT}})),
     {x:x0+0.34,y:5.46,w:cw*3+gap*2-0.66,h:1.4,fontSize:12,color:PPT.INK,valign:'top',lineSpacingMultiple:1.04});
 
@@ -582,19 +606,19 @@ async function montarPptx(R,prev,setores,analise,i0,i1){
     const dpp=R.perProd.filter(p=>p.clientes>0).sort((a,b)=>b.clientes-a.clientes).slice(0,12);
     const L=dpp.map(p=>trunc(p.descricao,28)).reverse(), V=dpp.map(p=>p.clientes).reverse();
     s.addText('Distribuição por produto (nº de lojas)',{x:0.5,y:1.58,w:12,h:0.35,fontSize:13,bold:true,color:PPT.INK,fontFace:PPT.FONT});
-    s.addChart(pptx.ChartType.bar,[{name:'Lojas',labels:L,values:V}],{x:0.4,y:2.0,w:12.5,h:4.7,barDir:'bar',chartColors:[PPT.AZUL],showValue:true,dataLabelColor:'363636',dataLabelFontSize:8,dataLabelPosition:'outEnd',catAxisLabelFontSize:8.5,valAxisHidden:true,showLegend:false,barGapWidthPct:40});
+    s.addChart(pptx.ChartType.bar,[{name:'Lojas',labels:L,values:V}],{x:0.4,y:2.0,w:12.5,h:4.7,barDir:'bar',chartColors:[ACCENT],showValue:true,dataLabelColor:'363636',dataLabelFontSize:8,dataLabelPosition:'outEnd',catAxisLabelFontSize:8.5,valAxisHidden:true,showLegend:false,barGapWidthPct:40});
   } else {
     const L=setores.slice(0,12).map(g=>trunc(g.nome,22)).reverse(), V=setores.slice(0,12).map(g=>g.clientes).reverse();
     s.addText('Lojas por setor',{x:0.5,y:1.58,w:12,h:0.35,fontSize:13,bold:true,color:PPT.INK,fontFace:PPT.FONT});
-    s.addChart(pptx.ChartType.bar,[{name:'Lojas',labels:L,values:V}],{x:0.4,y:2.0,w:12.5,h:4.7,barDir:'bar',chartColors:[PPT.AZUL],showValue:true,dataLabelColor:'363636',dataLabelFontSize:8,dataLabelPosition:'outEnd',catAxisLabelFontSize:8.5,valAxisHidden:true,showLegend:false});
+    s.addChart(pptx.ChartType.bar,[{name:'Lojas',labels:L,values:V}],{x:0.4,y:2.0,w:12.5,h:4.7,barDir:'bar',chartColors:[ACCENT],showValue:true,dataLabelColor:'363636',dataLabelFontSize:8,dataLabelPosition:'outEnd',catAxisLabelFontSize:8.5,valAxisHidden:true,showLegend:false});
   }
 
   /* --- Positivação mês a mês + média --- */
   s=pptx.addSlide({masterName:'M'}); addTitle(s,'Positivação mês a mês','Clientes distintos por mês · média de '+numFmt(R.posMedia)+' clientes/mês');
   { const L=R.serie.map(x=>mesLabel(x.m)), Cl=R.serie.map(x=>x.c), AV=R.serie.map(()=>R.posMedia);
     s.addChart([
-      {type:pptx.ChartType.bar, data:[{name:'Clientes no mês',labels:L,values:Cl}], options:{chartColors:[PPT.AZUL],showValue:true,dataLabelColor:'FFFFFF',dataLabelFontSize:10,dataLabelPosition:'inEnd'}},
-      {type:pptx.ChartType.line,data:[{name:'Média ('+numFmt(R.posMedia)+')',labels:L,values:AV}], options:{chartColors:[PPT.OURO],lineSize:2,lineDash:'dash',lineDataSymbol:'none'}}
+      {type:pptx.ChartType.bar, data:[{name:'Clientes no mês',labels:L,values:Cl}], options:{chartColors:[ACCENT],showValue:true,dataLabelColor:'FFFFFF',dataLabelFontSize:10,dataLabelPosition:'inEnd'}},
+      {type:pptx.ChartType.line,data:[{name:'Média ('+numFmt(R.posMedia)+')',labels:L,values:AV}], options:{chartColors:[LINEC],lineSize:2,lineDash:'dash',lineDataSymbol:'none'}}
     ],{x:0.5,y:1.7,w:12.3,h:4.7,showLegend:true,legendPos:'b',legendFontSize:11,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9,catAxisLabelFontSize:9});
   }
 
@@ -603,13 +627,13 @@ async function montarPptx(R,prev,setores,analise,i0,i1){
   { const L=R.serie.map(x=>mesLabel(x.m)), V=R.serie.map(x=>Math.round(x.v));
     if(prev){ const PV=prev.map(x=>Math.round(x||0));
       s.addChart(pptx.ChartType.bar,[{name:'Ano atual',labels:L,values:V},{name:'Ano anterior',labels:L,values:PV}],
-        {x:0.5,y:1.7,w:12.3,h:4.7,barGrouping:'clustered',chartColors:[PPT.AZUL,PPT.OURO],showLegend:true,legendPos:'b',valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9,catAxisLabelFontSize:9,showValue:true,dataLabelColor:'363636',dataLabelFontSize:7,dataLabelPosition:'outEnd',dataLabelFormatCode:'#,##0'});
+        {x:0.5,y:1.7,w:12.3,h:4.7,barGrouping:'clustered',chartColors:[ACCENT,PPT.OURO],showLegend:true,legendPos:'b',valAxisLabelFormatCode:'#,##0," mil"',valAxisLabelFontSize:9,catAxisLabelFontSize:9,showValue:true,dataLabelColor:'404040',dataLabelFontSize:7,dataLabelPosition:'outEnd',dataLabelFormatCode:'#,##0," mil"'});
     } else { let acc=0; const C=R.serie.map(x=>{acc+=x.v; return Math.round(acc);});
       s.addChart([
-        {type:pptx.ChartType.bar, data:[{name:'Sell out (R$)',labels:L,values:V}], options:{chartColors:[PPT.AZUL],showValue:true,dataLabelColor:'FFFFFF',dataLabelFontSize:8,dataLabelPosition:'inEnd',dataLabelFormatCode:'#,##0'}},
-        {type:pptx.ChartType.line,data:[{name:'Acumulado',labels:L,values:C}], options:{chartColors:[PPT.VERDE],secondaryValAxis:true,secondaryCatAxis:true,lineSize:3,lineDataSymbol:'circle',lineDataSymbolSize:6}}
+        {type:pptx.ChartType.bar, data:[{name:'Sell out (R$)',labels:L,values:V}], options:{chartColors:[ACCENT],showValue:true,dataLabelColor:'404040',dataLabelFontSize:9,dataLabelPosition:'outEnd',dataLabelFormatCode:'#,##0," mil"'}},
+        {type:pptx.ChartType.line,data:[{name:'Acumulado',labels:L,values:C}], options:{chartColors:[LINEC],secondaryValAxis:true,secondaryCatAxis:true,lineSize:3,lineDataSymbol:'circle',lineDataSymbolSize:6}}
       ],{x:0.5,y:1.7,w:12.3,h:4.7,showLegend:true,legendPos:'b',legendFontSize:11,
-         valAxes:[{showValAxisTitle:true,valAxisTitle:'Sell out mensal (R$)',valAxisTitleFontSize:10,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9},{showValAxisTitle:true,valAxisTitle:'Acumulado (R$)',valAxisTitleFontSize:10,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9}],
+         valAxes:[{showValAxisTitle:true,valAxisTitle:'Sell out mensal (R$)',valAxisTitleFontSize:10,valAxisLabelFormatCode:'#,##0," mil"',valAxisLabelFontSize:9},{showValAxisTitle:true,valAxisTitle:'Acumulado (R$)',valAxisTitleFontSize:10,valAxisLabelFormatCode:'#,##0," mil"',valAxisLabelFontSize:9}],
          catAxes:[{catAxisLabelFontSize:9},{catAxisHidden:true}]});
     }
   }
@@ -617,7 +641,7 @@ async function montarPptx(R,prev,setores,analise,i0,i1){
   /* --- Venda por produto (tabela) --- */
   if(isMulti){
     const vp=R.perProd.filter(p=>p.v>0).sort((a,b)=>b.v-a.v); const top=vp.slice(0,15);
-    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Venda por produto','Top '+top.length+' por sell out · Ticket/loja = R$ médio por loja · Meses/loja = em quantos meses (de '+R.serie.length+') cada loja comprou, em média');
+    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Venda por produto','Top '+top.length+' por sell out · Ticket/loja = R$ médio/loja · Meses/loja = meses (de '+R.serie.length+') com compra');
     const rows=[[ {text:'Produto',options:HC()},{text:'Lojas',options:HC('right')},{text:'Unidades',options:HC('right')},{text:'Sell out',options:HC('right')},{text:'Ticket/loja',options:HC('right')},{text:'Meses/loja',options:HC('right')} ]];
     let tQ=0,tV=0; vp.forEach(p=>{tQ+=p.q;tV+=p.v;});
     top.forEach((p,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF';
@@ -631,7 +655,7 @@ async function montarPptx(R,prev,setores,analise,i0,i1){
   /* --- Top 15 clientes --- */
   if(R.topClientes.length){
     const tc=R.topClientes.slice(0,15); const tot=R.valor||1; const sh=tc.reduce((a,c)=>a+c.v,0)/tot*100;
-    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Top 15 clientes','Maiores compradores · juntos são '+sh.toFixed(0)+'% do sell out · Prod. = produtos diferentes · Meses = em quantos meses comprou');
+    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Top 15 clientes','Juntos = '+sh.toFixed(0)+'% do sell out · Prod. = produtos diferentes · Meses = meses com compra');
     const rows=[[ {text:'#',options:HC('center')},{text:'Cliente',options:HC()},{text:'Setor',options:HC()},{text:'Prod.',options:HC('right')},{text:'Meses',options:HC('right')},{text:'Unidades',options:HC('right')},{text:'Sell out',options:HC('right')} ]];
     tc.forEach((c,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF';
       rows.push([ {text:String(idx+1),options:CELL(bg,{align:'center',color:PPT.MUTED})},{text:trunc(c.nome,34),options:CELL(bg)},{text:trunc(c.setor,18),options:CELL(bg,{color:PPT.MUTED})},
@@ -650,11 +674,16 @@ async function montarPptx(R,prev,setores,analise,i0,i1){
     {x:0.7,y:1.7,w:12,h:5.1,valign:'top',lineSpacingMultiple:1.08});
 
   /* --- Encerramento --- */
-  s=pptx.addSlide(); s.background={color:PPT.AZULD};
-  s.addShape(pptx.ShapeType.ellipse,{x:-1.6,y:4.6,w:4.4,h:4.4,fill:{color:PPT.AZUL},line:{type:'none'}});
-  if(LOGO_BRANCO) s.addImage({data:LOGO_BRANCO,x:5.0,y:2.5,w:3.3,sizing:{type:'contain',w:3.3,h:0.8}});
-  s.addText('Obrigado.',{x:0,y:3.5,w:13.33,h:0.8,align:'center',fontSize:34,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
-  s.addText('M. Ferretti Distribuidora · Parceria que faz girar',{x:0,y:4.4,w:13.33,h:0.5,align:'center',fontSize:14,color:PPT.LILAS,fontFace:PPT.FONT});
+  s=pptx.addSlide(); s.background={color:ACCENTD};
+  s.addShape(pptx.ShapeType.ellipse,{x:-1.6,y:4.6,w:4.4,h:4.4,fill:{color:ACCENT},line:{type:'none'}});
+  s.addText('Obrigado.',{x:0,y:2.3,w:13.33,h:0.9,align:'center',fontSize:36,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
+  if(logoMarca){
+    if(LOGO_BRANCO) s.addImage({data:LOGO_BRANCO,x:3.5,y:3.72,w:2.6,sizing:{type:'contain',w:2.6,h:0.66}});
+    s.addText('×',{x:6.25,y:3.62,w:0.6,h:0.8,align:'center',fontSize:26,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
+    s.addShape(pptx.ShapeType.roundRect,{x:6.95,y:3.5,w:2.85,h:1.05,rectRadius:0.1,fill:{color:'FFFFFF'},line:{type:'none'},shadow:{type:'outer',color:'000000',opacity:0.25,blur:8,offset:2,angle:90}});
+    s.addImage({data:logoMarca,x:7.2,y:3.68,w:2.35,sizing:{type:'contain',w:2.35,h:0.68}});
+  } else if(LOGO_BRANCO){ s.addImage({data:LOGO_BRANCO,x:5.0,y:3.6,w:3.3,sizing:{type:'contain',w:3.3,h:0.8}}); }
+  s.addText('M. Ferretti Distribuidora · Parceria que faz girar',{x:0,y:5.05,w:13.33,h:0.5,align:'center',fontSize:14,color:'EAEAF2',fontFace:PPT.FONT});
 
   const safe=(CTX.mode==='marca'?(marcaCode||'marca'):CTX.mode==='selecao'?'selecao':(CTX.badge||'rel')).replace(/[^A-Za-z0-9]/g,'');
   await pptx.writeFile({fileName:'Apresentacao_'+safe+'_'+periodo.replace(/[^0-9A-Za-z]/g,'')+'.pptx'});
