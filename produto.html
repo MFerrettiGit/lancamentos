@@ -203,6 +203,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 <script src="dados/marcas.js"></script>
 <script src="assets/charts.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 function fmtData(iso){ const p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
 function escapeAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -426,7 +427,7 @@ const PPT={AZUL:'2B2FA8',AZULD:'1C1F78',AZUL2:'3A3FD0',VERDE:'28A745',OURO:'F5B9
 const MARCA_BRAND={ AER:['00833e','aeroflex.png'], BAB:['3aa0d1','baruel.png'], BEL:['e6007e','bellacoton.png'], BRI:['c8102e','brics.png'],
   CLO:['2e7d32','cloy.png'], CRE:['e6007e','bellacoton.png'], DEN:['0067b1','dentics.png'], FAR:['00857c','farnese.png'], GAL:['1b3a6b','galaxy.png'],
   KIN:['b8860b','king.png'], LEI:['e5447d','leite-de-rosas.png'], MUL:['ee7203','multionic.png'], NAT:['2e9e4f','nathan.png'], PRU:['222222','prudence.png'],
-  SEM:['1d5d99','semorin.png'], SHO:['d52b1e','superfine.png'], SUS:['0072bc','sussex.png'], TEC:['f0a500','techluz.png'], TEN:['0a7d4d','baruel.png'],
+  SEM:['1d5d99','semorin.png'], SHO:['d52b1e','superfine.png'], SUS:['0072bc','sussex.png'], TEC:['8cc63f','techluz.png'], TEN:['0a7d4d','baruel.png'],
   TENW:['0a7d4d','baruel.png'], UNI:['ee7203','multionic.png'], WHI:['00a7e1','orbi.png'], YAM:['c8102e','yama.png'] };
 function darkenHex(hex,f){ const n=parseInt(hex,16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; r=Math.round(r*f);g=Math.round(g*f);b=Math.round(b*f); return ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
 function mixWhite(hex,t){ const n=parseInt(hex,16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; r=Math.round(r+(255-r)*t);g=Math.round(g+(255-g)*t);b=Math.round(b+(255-b)*t); return ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
@@ -437,6 +438,36 @@ let LOGO_BRANCO=null, LOGO_AZUL=null; const LOGO_MARCA_CACHE={};
 async function toDataURL(url){ try{ const r=await fetch(url); if(!r.ok) return null; const b=await r.blob();
   return await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>res(null); fr.readAsDataURL(b); }); }catch(e){ return null; } }
 async function logoDaMarca(file){ if(!file) return null; if(LOGO_MARCA_CACHE[file]!==undefined) return LOGO_MARCA_CACHE[file]; const d=await toDataURL('assets/marcas/'+file); LOGO_MARCA_CACHE[file]=d; return d; }
+function lum(hex){ const n=parseInt(hex,16); return 0.299*((n>>16)&255)+0.587*((n>>8)&255)+0.114*(n&255); }
+// Lê proporção (aspect) e a cor dominante (saturada) DO PRÓPRIO LOGO — assim o acento sempre bate com a marca.
+function imgInfo(dataURL){ return new Promise(res=>{ const img=new Image();
+  img.onload=()=>{ const aspect=(img.naturalWidth/img.naturalHeight)||2.6;
+    try{ const cw=64, ch=Math.max(1,Math.round(64/aspect)); const c=document.createElement('canvas'); c.width=cw;c.height=ch;
+      const x=c.getContext('2d'); x.drawImage(img,0,0,cw,ch); const d=x.getImageData(0,0,cw,ch).data;
+      let sr=0,sg=0,sb=0,cnt=0; for(let i=0;i<d.length;i+=4){ const r=d[i],g=d[i+1],b=d[i+2],a=d[i+3]; if(a<128) continue;
+        const mx=Math.max(r,g,b),mn=Math.min(r,g,b); const v=mx/255, s=mx?(mx-mn)/mx:0;
+        if(s>0.22 && v>0.18 && v<0.96){ sr+=r;sg+=g;sb+=b;cnt++; } }
+      const hx=t=>Math.round(t).toString(16).padStart(2,'0'); const accent=cnt>=8?(hx(sr/cnt)+hx(sg/cnt)+hx(sb/cnt)):null;
+      res({aspect,accent});
+    }catch(e){ res({aspect,accent:null}); } };
+  img.onerror=()=>res(null); img.src=dataURL; }); }
+// Exporta o .pptx adicionando TRANSIÇÃO (fade) entre os slides; se falhar, baixa sem.
+async function exportarComAnimacao(pptx,fileName){
+  try{
+    if(typeof JSZip==='undefined') throw new Error('jszip indisponível');
+    const buf=await pptx.write({outputType:'arraybuffer'});
+    const zip=await JSZip.loadAsync(buf);
+    const slides=Object.keys(zip.files).filter(f=>/^ppt\/slides\/slide\d+\.xml$/.test(f));
+    const trans='<p:transition spd="med"><p:fade/></p:transition>';
+    for(const f of slides){ let xml=await zip.file(f).async('string'); if(xml.indexOf('<p:transition')>=0) continue;
+      if(xml.indexOf('</p:clrMapOvr>')>=0) xml=xml.replace('</p:clrMapOvr>','</p:clrMapOvr>'+trans);
+      else xml=xml.replace('</p:cSld>','</p:cSld>'+trans);
+      zip.file(f,xml); }
+    const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fileName; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
+  }catch(e){ console.warn('Sem transições:',e); await pptx.writeFile({fileName}); }
+}
 
 function trunc(s,n){ s=s||''; return s.length>n? s.slice(0,n-1)+'…' : s; }
 
@@ -534,13 +565,15 @@ async function criarApresentacao(){
     const setores=buildSetores(CTX.prods,intersect,i0,i1);
     const analise=gerarAnalise(R,prev,i0,i1);
     const brand=brandAtual();
-    const logoMarca=brand?await logoDaMarca(brand.logo):null;
-    await montarPptx(R,prev,setores,analise,i0,i1,brand,logoMarca);
+    let deckBrand=null;
+    if(brand){ const logo=await logoDaMarca(brand.logo); const info=logo?await imgInfo(logo):null;
+      deckBrand={ logo, aspect:(info&&info.aspect)||2.6, accent:brand.accent, code:brand.code }; }
+    await montarPptx(R,prev,setores,analise,i0,i1,deckBrand);
   }catch(e){ console.error(e); alert('Não consegui gerar a apresentação: '+(e&&e.message?e.message:e)); }
   finally{ pptBtn.classList.remove('busy'); pptBtn.disabled=false; pptBtn.textContent=orig; }
 }
 
-async function montarPptx(R,prev,setores,analise,i0,i1,brand,logoMarca){
+async function montarPptx(R,prev,setores,analise,i0,i1,deckBrand){
   const pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE'; pptx.author='M. Ferretti Distribuidora'; pptx.company='M. Ferretti';
   const periodo=mesLabel(MESES[i0])+' a '+mesLabel(MESES[i1]);
   const escopo=(ACC&&ACC.escopo&&ACC.escopo!=='todos')?(ACC.escopo==='regional'?('Regional '+ACC.valor):('Setor '+ACC.valor)):'Visão geral';
@@ -551,12 +584,18 @@ async function montarPptx(R,prev,setores,analise,i0,i1,brand,logoMarca){
                     : CTX.mode==='selecao' ? (CTX.prods.length+' produto(s) selecionado(s)')
                     : ('Código: '+(CTX.sub||'').replace('Código: ',''));
   const isMulti = CTX.mode!=='produto';
+  const logoMarca = deckBrand ? deckBrand.logo : null;
+  const logoAspect = deckBrand ? deckBrand.aspect : 2.6;
 
-  /* Cores do FORNECEDOR (com fallback no azul Ferretti) */
-  const ACCENT  = brand ? brand.accent : PPT.AZUL;
-  const ACCENTD = brand ? darkenHex(brand.accent,0.50) : PPT.AZULD;
-  const ACCENT2 = brand ? mixWhite(brand.accent,0.22) : PPT.AZUL2;
-  const LINEC   = '404040';  // cor neutra das linhas (contrasta com qualquer cor de marca)
+  /* Cores do FORNECEDOR (extraídas do próprio logo; fallback azul Ferretti) */
+  const RAW    = deckBrand ? deckBrand.accent : PPT.AZUL;
+  const ACCENT = lum(RAW)>168 ? darkenHex(RAW,0.62) : RAW;   // versão legível p/ textos, barras e cabeçalhos
+  const TINT   = mixWhite(RAW,0.86);                          // tom bem suave p/ formas decorativas
+  const TINT2  = mixWhite(RAW,0.93);
+  const LINEC  = '404040';  // cor neutra das linhas dos gráficos
+  const FER_ASP=2.85;
+  function placeLogo(s,data,x,y,maxW,maxH){ if(!data) return; let w=maxH*logoAspect,h=maxH; if(w>maxW){ w=maxW; h=maxW/logoAspect; } s.addImage({data,x,y:y+(maxH-h)/2,w,h}); }
+  function placeFer(s,data,x,y,maxW,maxH){ if(!data) return; let w=maxH*FER_ASP,h=maxH; if(w>maxW){ w=maxW; h=maxW/FER_ASP; } s.addImage({data,x,y:y+(maxH-h)/2,w,h}); }
 
   pptx.defineSlideMaster({title:'M',background:{color:'FFFFFF'},
     objects:[{rect:{x:0,y:7.16,w:'100%',h:0.012,fill:{color:PPT.LINE}}},
@@ -568,23 +607,24 @@ async function montarPptx(R,prev,setores,analise,i0,i1,brand,logoMarca){
     s.addText(title,{x:0.5,y:0.4,w:tw,h:0.6,fontSize:24,bold:true,color:PPT.INK,fontFace:PPT.FONT});
     if(sub) s.addText(sub,{x:0.5,y:0.98,w:tw,h:0.4,fontSize:12.5,color:PPT.MUTED,fontFace:PPT.FONT});
     s.addShape(pptx.ShapeType.rect,{x:0.5,y:1.4,w:0.85,h:0.06,fill:{color:ACCENT}});
-    if(logoMarca) s.addImage({data:logoMarca,x:11.25,y:0.32,w:1.6,sizing:{type:'contain',w:1.6,h:0.7}});
+    if(logoMarca) placeLogo(s,logoMarca,11.05,0.34,1.8,0.66);
   }
   const HC=c=>({bold:true,color:'FFFFFF',fill:{color:ACCENT},fontSize:10.5,fontFace:PPT.FONT,align:c||'left',valign:'middle'});
   const CELL=(bg,extra)=>Object.assign({fontSize:9.5,fill:{color:bg},fontFace:PPT.FONT,valign:'middle',color:PPT.INK},extra||{});
 
   /* --- Capa --- */
-  let s=pptx.addSlide(); s.background={color:ACCENTD};
-  s.addShape(pptx.ShapeType.ellipse,{x:10.4,y:4.4,w:3.8,h:3.8,fill:{color:ACCENT2},line:{type:'none'}});
-  s.addShape(pptx.ShapeType.ellipse,{x:-1.7,y:-1.7,w:3.0,h:3.0,fill:{color:ACCENT},line:{type:'none'}});
-  if(LOGO_BRANCO) s.addImage({data:LOGO_BRANCO,x:0.6,y:0.55,w:2.5,sizing:{type:'contain',w:2.5,h:0.62}});
-  if(logoMarca){ s.addShape(pptx.ShapeType.roundRect,{x:9.55,y:0.5,w:3.2,h:1.15,rectRadius:0.1,fill:{color:'FFFFFF'},line:{type:'none'},shadow:{type:'outer',color:'000000',opacity:0.28,blur:9,offset:3,angle:90}});
-    s.addImage({data:logoMarca,x:9.85,y:0.7,w:2.6,sizing:{type:'contain',w:2.6,h:0.75}}); }
-  s.addText('APRESENTAÇÃO AO FORNECEDOR',{x:0.62,y:2.35,w:10,h:0.4,fontSize:13,bold:true,color:'F0F0F0',charSpacing:2,fontFace:PPT.FONT});
-  s.addText(coverTitle,{x:0.6,y:2.82,w:11.5,h:1.4,fontSize:40,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
-  s.addText('Sell out, distribuição e positivação · '+coverSub,{x:0.62,y:4.4,w:11.5,h:0.6,fontSize:16,color:'EAEAF2',fontFace:PPT.FONT});
+  let s=pptx.addSlide();  // fundo branco
+  s.addShape(pptx.ShapeType.ellipse,{x:10.5,y:4.7,w:5.4,h:5.4,fill:{color:TINT},line:{type:'none'}});
+  s.addShape(pptx.ShapeType.ellipse,{x:12.0,y:6.0,w:3.0,h:3.0,fill:{color:TINT2},line:{type:'none'}});
+  s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.333,h:0.16,fill:{color:ACCENT},line:{type:'none'}});
+  placeFer(s,LOGO_AZUL,0.7,0.62,2.5,0.6);
+  placeLogo(s,logoMarca,9.4,0.5,3.3,1.05);
+  s.addText('APRESENTAÇÃO AO FORNECEDOR',{x:0.74,y:2.7,w:9,h:0.4,fontSize:14,bold:true,color:ACCENT,charSpacing:2,fontFace:PPT.FONT});
+  s.addText(coverTitle,{x:0.7,y:3.15,w:10.6,h:1.2,fontSize:44,bold:true,color:PPT.INK,fontFace:PPT.FONT});
+  s.addShape(pptx.ShapeType.rect,{x:0.76,y:4.5,w:1.5,h:0.08,fill:{color:ACCENT},line:{type:'none'}});
+  s.addText('Sell out, distribuição e positivação · '+coverSub,{x:0.74,y:4.72,w:10.6,h:0.6,fontSize:16,color:PPT.MUTED,fontFace:PPT.FONT});
   s.addText([{text:'Período: ',options:{bold:true}},{text:periodo,options:{}},{text:'      Acesso: ',options:{bold:true}},{text:escopo,options:{}},{text:'      Atualizado em ',options:{bold:true}},{text:P.meta.atualizadoEm,options:{}}],
-    {x:0.62,y:6.4,w:12,h:0.4,fontSize:11,color:'E2E2EE',fontFace:PPT.FONT});
+    {x:0.74,y:6.55,w:12,h:0.4,fontSize:11,color:PPT.MUTED,fontFace:PPT.FONT});
 
   /* --- Panorama (KPIs) --- */
   s=pptx.addSlide({masterName:'M'}); addTitle(s,'Panorama do período',coverTitle+' · '+periodo);
@@ -674,19 +714,20 @@ async function montarPptx(R,prev,setores,analise,i0,i1,brand,logoMarca){
     {x:0.7,y:1.7,w:12,h:5.1,valign:'top',lineSpacingMultiple:1.08});
 
   /* --- Encerramento --- */
-  s=pptx.addSlide(); s.background={color:ACCENTD};
-  s.addShape(pptx.ShapeType.ellipse,{x:-1.6,y:4.6,w:4.4,h:4.4,fill:{color:ACCENT},line:{type:'none'}});
-  s.addText('Obrigado.',{x:0,y:2.3,w:13.33,h:0.9,align:'center',fontSize:36,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
+  s=pptx.addSlide();  // fundo branco
+  s.addShape(pptx.ShapeType.ellipse,{x:-1.8,y:5.0,w:4.8,h:4.8,fill:{color:TINT},line:{type:'none'}});
+  s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.333,h:0.16,fill:{color:ACCENT},line:{type:'none'}});
+  s.addText('Obrigado.',{x:0,y:1.95,w:13.333,h:0.95,align:'center',fontSize:40,bold:true,color:PPT.INK,fontFace:PPT.FONT});
+  s.addShape(pptx.ShapeType.rect,{x:6.165,y:3.0,w:1.0,h:0.07,fill:{color:ACCENT},line:{type:'none'}});
   if(logoMarca){
-    if(LOGO_BRANCO) s.addImage({data:LOGO_BRANCO,x:3.5,y:3.72,w:2.6,sizing:{type:'contain',w:2.6,h:0.66}});
-    s.addText('×',{x:6.25,y:3.62,w:0.6,h:0.8,align:'center',fontSize:26,bold:true,color:'FFFFFF',fontFace:PPT.FONT});
-    s.addShape(pptx.ShapeType.roundRect,{x:6.95,y:3.5,w:2.85,h:1.05,rectRadius:0.1,fill:{color:'FFFFFF'},line:{type:'none'},shadow:{type:'outer',color:'000000',opacity:0.25,blur:8,offset:2,angle:90}});
-    s.addImage({data:logoMarca,x:7.2,y:3.68,w:2.35,sizing:{type:'contain',w:2.35,h:0.68}});
-  } else if(LOGO_BRANCO){ s.addImage({data:LOGO_BRANCO,x:5.0,y:3.6,w:3.3,sizing:{type:'contain',w:3.3,h:0.8}}); }
-  s.addText('M. Ferretti Distribuidora · Parceria que faz girar',{x:0,y:5.05,w:13.33,h:0.5,align:'center',fontSize:14,color:'EAEAF2',fontFace:PPT.FONT});
+    placeFer(s,LOGO_AZUL,3.6,3.5,2.7,0.78);
+    s.addText('×',{x:6.35,y:3.56,w:0.6,h:0.8,align:'center',fontSize:24,bold:true,color:PPT.MUTED,fontFace:PPT.FONT});
+    placeLogo(s,logoMarca,7.05,3.42,2.9,0.95);
+  } else { placeFer(s,LOGO_AZUL,5.05,3.5,3.2,0.8); }
+  s.addText('M. Ferretti Distribuidora · Parceria que faz girar',{x:0,y:4.95,w:13.333,h:0.5,align:'center',fontSize:14,color:PPT.MUTED,fontFace:PPT.FONT});
 
   const safe=(CTX.mode==='marca'?(marcaCode||'marca'):CTX.mode==='selecao'?'selecao':(CTX.badge||'rel')).replace(/[^A-Za-z0-9]/g,'');
-  await pptx.writeFile({fileName:'Apresentacao_'+safe+'_'+periodo.replace(/[^0-9A-Za-z]/g,'')+'.pptx'});
+  await exportarComAnimacao(pptx,'Apresentacao_'+safe+'_'+periodo.replace(/[^0-9A-Za-z]/g,'')+'.pptx');
 }
 pptBtn.addEventListener('click',criarApresentacao);
 
