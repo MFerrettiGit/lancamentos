@@ -459,35 +459,52 @@ function aggregateRich(prods,i0,i1){
   return {dist:globalCli.size,valor,qtd,posMedia,serie,positivacoes,freqMediaCli:nc?fs/nc:0,perProd,topClientes};
 }
 
-/* Análises automáticas (descritivas + oportunidades) para o fornecedor. */
+function dec1(x){ return (Math.round((x||0)*10)/10).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}); }
+
+/* Análises automáticas em linguagem clara (resumo + leitura + oportunidades). */
 function gerarAnalise(R,prev,i0,i1){
-  const ger=[],opp=[]; const n=R.serie.length; const tot=R.valor||1;
+  const ger=[],opp=[],resumo=[]; const n=R.serie.length; const tot=R.valor||1;
   const mesesComV=R.serie.filter(s=>s.v>0).length, mediaMes=mesesComV?R.valor/mesesComV:0;
-  ger.push(`Sell out de ${brl(R.valor)} no período (${mesLabel(MESES[i0])}–${mesLabel(MESES[i1])}), ${numFmt(R.qtd)} itens — média de ${brl(mediaMes)}/mês.`);
-  ger.push(`Cobertura de ${numFmt(R.dist)} loja(s) e ${numFmt(R.positivacoes)} positivações (produto × loja). Ticket médio por loja: ${brl(R.dist?R.valor/R.dist:0)}.`);
-  if(n>=2){ const ratio=R.freqMediaCli/n; const cls=ratio>=0.6?'alta recorrência':ratio>=0.35?'recorrência moderada':'baixa recorrência';
-    ger.push(`Frequência de compra: cada cliente comprou em média ${R.freqMediaCli.toFixed(1)} de ${n} meses (${cls}).`);
-    if(ratio<0.35 && R.dist>0) opp.push(`Ampla distribuição (${numFmt(R.dist)} lojas) porém baixa recompra (${R.freqMediaCli.toFixed(1)}/${n} meses): espaço claro para ações de recorrência e reposição nos PDVs já abertos.`); }
+  const ticketLoja=R.dist?R.valor/R.dist:0;
+  const intervalo=R.freqMediaCli>0? n/R.freqMediaCli : 0;
+  let trendTxt='', trendD=null;
   if(n>=4){ const k=Math.min(3,Math.floor(n/2)); const ini=R.serie.slice(0,k).reduce((s,x)=>s+x.v,0)/k, fim=R.serie.slice(-k).reduce((s,x)=>s+x.v,0)/k;
-    if(ini>0){ const d=(fim-ini)/ini*100; const t=d>=8?'em crescimento':d<=-8?'em queda':'estável'; ger.push(`Tendência de sell out ${t}: média dos últimos ${k} meses ${d>=0?'+':''}${d.toFixed(0)}% vs. os ${k} primeiros.`); } }
-  if(n>1){ let b=R.serie[0],w=R.serie[0]; R.serie.forEach(s=>{if(s.v>b.v)b=s;if(s.v<w.v)w=s;}); ger.push(`Pico em ${mesLabel(b.m)} (${brl(b.v)}); mês mais fraco ${mesLabel(w.m)} (${brl(w.v)}).`); }
-  ger.push(`Positivação média mensal de ${numFmt(R.posMedia)} clientes.`);
-  if(prev){ const pt=prev.reduce((s,x)=>s+(x||0),0); if(pt>0){ const d=(R.valor-pt)/pt*100; ger.push(`Vs. mesmo período do ano anterior (${brl(pt)}): ${d>=0?'+':''}${d.toFixed(0)}% de sell out.`); } }
-  if(R.topClientes.length>=5){ const t5=R.topClientes.slice(0,5).reduce((s,c)=>s+c.v,0), t15=R.topClientes.slice(0,15).reduce((s,c)=>s+c.v,0);
-    ger.push(`Concentração: os 5 maiores clientes valem ${(t5/tot*100).toFixed(0)}% e os 15 maiores ${(t15/tot*100).toFixed(0)}% do sell out.`);
-    if(t5/tot>=0.4) opp.push(`Faturamento concentrado nos 5 maiores clientes (${(t5/tot*100).toFixed(0)}%): vale desenvolver a base intermediária para reduzir a dependência.`); }
+    if(ini>0){ trendD=(fim-ini)/ini*100; trendTxt=trendD>=8?'em crescimento':trendD<=-8?'em queda':'estável'; } }
+  let best=R.serie[0],worst=R.serie[0]; R.serie.forEach(s=>{if(s.v>best.v)best=s;if(s.v<worst.v)worst=s;});
+  const t5=R.topClientes.slice(0,5).reduce((s,c)=>s+c.v,0), t15=R.topClientes.slice(0,15).reduce((s,c)=>s+c.v,0);
+  const c5=t5/tot*100, c15=t15/tot*100;
+
+  /* ----- RESUMO (slide Panorama) ----- */
+  resumo.push(`Faturamento de ${brl(R.valor)} em ${n} meses — em média ${brl(mediaMes)}/mês`+(trendTxt?`, com vendas ${trendTxt}`:'')+`.`);
+  resumo.push(`A marca esteve presente em ${numFmt(R.dist)} lojas, que compraram em média ${brl(ticketLoja)} cada no período.`);
+  if(intervalo>0) resumo.push(`Recompra: cada loja comprou em ${dec1(R.freqMediaCli)} dos ${n} meses (volta a comprar ~a cada ${dec1(intervalo)} meses).`);
+  if(n>1) resumo.push(`Melhor mês: ${mesLabel(best.m)} (${brl(best.v)}). ${c5>=40?'Vendas concentradas':'Vendas bem distribuídas'}: os 5 maiores clientes = ${c5.toFixed(0)}% do total.`);
+
+  /* ----- ANÁLISE (clara) ----- */
+  ger.push(`Faturamento de ${brl(R.valor)} no período (${mesLabel(MESES[i0])} a ${mesLabel(MESES[i1])}): em média ${brl(mediaMes)} por mês, somando ${numFmt(R.qtd)} unidades vendidas.`);
+  ger.push(`A marca chegou a ${numFmt(R.dist)} lojas. Cada loja comprou, em média, ${brl(ticketLoja)} no período.`);
+  if(n>=2) ger.push(`Recompra: em média, cada loja comprou em ${dec1(R.freqMediaCli)} dos ${n} meses — ou seja, volta a comprar mais ou menos a cada ${dec1(intervalo)} meses.`);
+  if(trendD!=null) ger.push(`Vendas ${trendTxt}: o trimestre mais recente faturou ${trendD>=0?'+':''}${trendD.toFixed(0)}% em relação ao primeiro trimestre do período.`);
+  if(n>1) ger.push(`Melhor mês: ${mesLabel(best.m)} (${brl(best.v)}). Mês mais fraco: ${mesLabel(worst.m)} (${brl(worst.v)}).`);
+  ger.push(`Em média, ${numFmt(R.posMedia)} lojas diferentes compraram a cada mês.`);
+  if(prev){ const pt=prev.reduce((s,x)=>s+(x||0),0); if(pt>0){ const d=(R.valor-pt)/pt*100; ger.push(`Contra o mesmo período do ano passado (${brl(pt)}): ${d>=0?'+':''}${d.toFixed(0)}% de faturamento.`); } }
+  if(R.topClientes.length>=5) ger.push(`Dependência de clientes: os 5 maiores respondem por ${c5.toFixed(0)}% e os 15 maiores por ${c15.toFixed(0)}% do faturamento.`);
+
+  /* ----- OPORTUNIDADES ----- */
+  if(n>=2 && R.freqMediaCli/n<0.35 && R.dist>0) opp.push(`Boa distribuição (${numFmt(R.dist)} lojas), mas recompra baixa (cada loja comprou em só ${dec1(R.freqMediaCli)} dos ${n} meses): há espaço para aumentar a frequência de pedidos nas lojas já abertas.`);
+  if(c5>=40) opp.push(`Faturamento concentrado nos 5 maiores clientes (${c5.toFixed(0)}%): desenvolver a base intermediária reduz a dependência.`);
   const pp=R.perProd.filter(p=>p.clientes>0);
   if(pp.length>1){ const thr=Math.max(3,Math.round(R.dist*0.05)); const cand=pp.filter(p=>p.clientes>=thr); const base=cand.length?cand:pp;
     const tkt=base.slice().sort((a,b)=>b.ticket-a.ticket)[0]; const reach=pp.slice().sort((a,b)=>b.clientes-a.clientes)[0]; const val=pp.slice().sort((a,b)=>b.v-a.v)[0];
-    if(tkt&&reach&&tkt.codigo!==reach.codigo) opp.push(`${trunc(tkt.descricao,36)} vende para menos lojas (${numFmt(tkt.clientes)}) mas fatura mais por cliente (${brl(tkt.ticket)}) — produto de alto valor; já ${trunc(reach.descricao,36)} tem o maior alcance (${numFmt(reach.clientes)} lojas), com ticket de ${brl(reach.ticket)}.`);
-    if(val) opp.push(`Carro-chefe: ${trunc(val.descricao,36)} responde por ${(val.v/tot*100).toFixed(0)}% do sell out, presente em ${numFmt(val.clientes)} lojas.`);
+    if(tkt&&reach&&tkt.codigo!==reach.codigo) opp.push(`${trunc(tkt.descricao,34)} está em menos lojas (${numFmt(tkt.clientes)}) mas rende mais por loja (${brl(tkt.ticket)}). Já ${trunc(reach.descricao,34)} é o de maior alcance (${numFmt(reach.clientes)} lojas), com ${brl(reach.ticket)} por loja.`);
+    if(val) opp.push(`Carro-chefe: ${trunc(val.descricao,34)} sozinho é ${(val.v/tot*100).toFixed(0)}% do faturamento da marca, presente em ${numFmt(val.clientes)} lojas.`);
     const lowF=pp.filter(p=>p.clientes>=thr && p.freq>0 && p.freq<(n>=3?1.6:1.1)).sort((a,b)=>b.clientes-a.clientes)[0];
-    if(lowF) opp.push(`${trunc(lowF.descricao,36)} está em ${numFmt(lowF.clientes)} lojas mas com recompra baixa (${lowF.freq.toFixed(1)} meses/cliente): boa distribuição, foco agora em giro e reposição.`);
-    const niche=pp.filter(p=>p.clientes>0 && p.clientes<R.dist*0.4 && p.ticket>=(R.dist?R.valor/R.dist:0)).sort((a,b)=>b.ticket-a.ticket)[0];
-    if(niche) opp.push(`${trunc(niche.descricao,36)} tem ticket alto (${brl(niche.ticket)}/cliente) e ainda baixa penetração (${numFmt(niche.clientes)} lojas): oportunidade de ampliar a distribuição.`);
+    if(lowF) opp.push(`${trunc(lowF.descricao,34)} está bem distribuído (${numFmt(lowF.clientes)} lojas), porém comprado em poucos meses (${dec1(lowF.freq)} de ${n}): foco em giro e reposição.`);
+    const niche=pp.filter(p=>p.clientes>0 && p.clientes<R.dist*0.4 && p.ticket>=ticketLoja).sort((a,b)=>b.ticket-a.ticket)[0];
+    if(niche) opp.push(`${trunc(niche.descricao,34)} rende bem por loja (${brl(niche.ticket)}) mas está em poucas lojas (${numFmt(niche.clientes)}): oportunidade de ampliar a distribuição.`);
   }
   if(!opp.length) opp.push('Desempenho equilibrado entre distribuição, recompra e mix de produtos no período.');
-  return {ger,opp};
+  return {ger,opp,resumo};
 }
 
 async function criarApresentacao(){
@@ -547,20 +564,20 @@ async function montarPptx(R,prev,setores,analise,i0,i1){
 
   /* --- Panorama (KPIs) --- */
   s=pptx.addSlide({masterName:'M'}); addTitle(s,'Panorama do período',coverTitle+' · '+periodo);
-  const kpis=[['SELL OUT NO PERÍODO',brl(R.valor),PPT.VERDE],['ITENS VENDIDOS',numFmt(R.qtd)+' un',PPT.AZUL],['COBERTURA',numFmt(R.dist)+' lojas',PPT.AZUL],
-    ['POSITIVAÇÕES',numFmt(R.positivacoes),PPT.AZUL],['POSITIVAÇÃO MÉDIA',numFmt(R.posMedia)+'/mês',PPT.AZUL],['TICKET MÉDIO/LOJA',brl(R.dist?R.valor/R.dist:0),PPT.AZUL]];
+  const kpis=[['SELL OUT NO PERÍODO',brl(R.valor),PPT.VERDE],['UNIDADES VENDIDAS',numFmt(R.qtd)+' un',PPT.AZUL],['COBERTURA',numFmt(R.dist)+' lojas',PPT.AZUL],
+    ['TICKET MÉDIO/LOJA',brl(R.dist?R.valor/R.dist:0),PPT.AZUL],['POSITIVAÇÃO MÉDIA',numFmt(R.posMedia)+'/mês',PPT.AZUL],['RECOMPRA MÉDIA',dec1(R.freqMediaCli)+' de '+R.serie.length+' meses',PPT.AZUL]];
   const cw=3.91,gap=0.3,x0=0.55;
-  kpis.forEach((k,i)=>{ const col=i%3,row=Math.floor(i/3); const x=x0+col*(cw+gap),y=1.75+row*1.65;
-    s.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:1.45,rectRadius:0.09,fill:{color:'FFFFFF'},line:{color:PPT.LINE,width:1},shadow:{type:'outer',color:'B8C0D8',opacity:0.4,blur:7,offset:3,angle:90}});
-    s.addText(k[0],{x:x+0.18,y:y+0.18,w:cw-0.36,h:0.35,fontSize:10,bold:true,color:PPT.MUTED,charSpacing:1,fontFace:PPT.FONT});
-    s.addText(k[1],{x:x+0.18,y:y+0.58,w:cw-0.36,h:0.6,fontSize:20,bold:true,color:k[2],fontFace:PPT.FONT,valign:'top'}); });
-  s.addShape(pptx.ShapeType.roundRect,{x:x0,y:5.15,w:cw*3+gap*2,h:1.6,rectRadius:0.08,fill:{color:'F4F6FB'},line:{color:PPT.LINE,width:1}});
-  s.addText('Destaque',{x:x0+0.3,y:5.35,w:11,h:0.3,fontSize:11,bold:true,color:PPT.VERDE,charSpacing:1,fontFace:PPT.FONT});
-  s.addText(analise.ger.slice(0,2).map(t=>({text:t,options:{breakLine:true,paraSpaceAfter:6,fontFace:PPT.FONT}})),
-    {x:x0+0.3,y:5.68,w:cw*3+gap*2-0.6,h:1.0,fontSize:13,color:PPT.INK,valign:'top',lineSpacingMultiple:1.1});
+  kpis.forEach((k,i)=>{ const col=i%3,row=Math.floor(i/3); const x=x0+col*(cw+gap),y=1.7+row*1.6;
+    s.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:1.4,rectRadius:0.09,fill:{color:'FFFFFF'},line:{color:PPT.LINE,width:1},shadow:{type:'outer',color:'B8C0D8',opacity:0.4,blur:7,offset:3,angle:90}});
+    s.addText(k[0],{x:x+0.18,y:y+0.16,w:cw-0.36,h:0.35,fontSize:10,bold:true,color:PPT.MUTED,charSpacing:1,fontFace:PPT.FONT});
+    s.addText(k[1],{x:x+0.18,y:y+0.55,w:cw-0.36,h:0.6,fontSize:18,bold:true,color:k[2],fontFace:PPT.FONT,valign:'top'}); });
+  s.addShape(pptx.ShapeType.roundRect,{x:x0,y:4.95,w:cw*3+gap*2,h:1.95,rectRadius:0.08,fill:{color:'F4F6FB'},line:{color:PPT.LINE,width:1}});
+  s.addText('Resumo',{x:x0+0.3,y:5.12,w:11,h:0.3,fontSize:11,bold:true,color:PPT.VERDE,charSpacing:1,fontFace:PPT.FONT});
+  s.addText(analise.resumo.map(t=>({text:t,options:{bullet:{code:'2022',indent:14},breakLine:true,paraSpaceAfter:5,fontFace:PPT.FONT}})),
+    {x:x0+0.34,y:5.46,w:cw*3+gap*2-0.66,h:1.4,fontSize:12,color:PPT.INK,valign:'top',lineSpacingMultiple:1.04});
 
   /* --- Distribuição no período + por produto --- */
-  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Distribuição no período', numFmt(R.dist)+' lojas atendidas · '+numFmt(R.positivacoes)+' positivações (produto × loja)');
+  s=pptx.addSlide({masterName:'M'}); addTitle(s,'Distribuição no período', numFmt(R.dist)+' lojas diferentes compraram a marca no período');
   if(isMulti){
     const dpp=R.perProd.filter(p=>p.clientes>0).sort((a,b)=>b.clientes-a.clientes).slice(0,12);
     const L=dpp.map(p=>trunc(p.descricao,28)).reverse(), V=dpp.map(p=>p.clientes).reverse();
@@ -576,7 +593,7 @@ async function montarPptx(R,prev,setores,analise,i0,i1){
   s=pptx.addSlide({masterName:'M'}); addTitle(s,'Positivação mês a mês','Clientes distintos por mês · média de '+numFmt(R.posMedia)+' clientes/mês');
   { const L=R.serie.map(x=>mesLabel(x.m)), Cl=R.serie.map(x=>x.c), AV=R.serie.map(()=>R.posMedia);
     s.addChart([
-      {type:pptx.ChartType.bar, data:[{name:'Clientes no mês',labels:L,values:Cl}], options:{chartColors:[PPT.AZUL]}},
+      {type:pptx.ChartType.bar, data:[{name:'Clientes no mês',labels:L,values:Cl}], options:{chartColors:[PPT.AZUL],showValue:true,dataLabelColor:'FFFFFF',dataLabelFontSize:10,dataLabelPosition:'inEnd'}},
       {type:pptx.ChartType.line,data:[{name:'Média ('+numFmt(R.posMedia)+')',labels:L,values:AV}], options:{chartColors:[PPT.OURO],lineSize:2,lineDash:'dash',lineDataSymbol:'none'}}
     ],{x:0.5,y:1.7,w:12.3,h:4.7,showLegend:true,legendPos:'b',legendFontSize:11,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9,catAxisLabelFontSize:9});
   }
@@ -586,10 +603,10 @@ async function montarPptx(R,prev,setores,analise,i0,i1){
   { const L=R.serie.map(x=>mesLabel(x.m)), V=R.serie.map(x=>Math.round(x.v));
     if(prev){ const PV=prev.map(x=>Math.round(x||0));
       s.addChart(pptx.ChartType.bar,[{name:'Ano atual',labels:L,values:V},{name:'Ano anterior',labels:L,values:PV}],
-        {x:0.5,y:1.7,w:12.3,h:4.7,barGrouping:'clustered',chartColors:[PPT.AZUL,PPT.OURO],showLegend:true,legendPos:'b',valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9,catAxisLabelFontSize:9});
+        {x:0.5,y:1.7,w:12.3,h:4.7,barGrouping:'clustered',chartColors:[PPT.AZUL,PPT.OURO],showLegend:true,legendPos:'b',valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9,catAxisLabelFontSize:9,showValue:true,dataLabelColor:'363636',dataLabelFontSize:7,dataLabelPosition:'outEnd',dataLabelFormatCode:'#,##0'});
     } else { let acc=0; const C=R.serie.map(x=>{acc+=x.v; return Math.round(acc);});
       s.addChart([
-        {type:pptx.ChartType.bar, data:[{name:'Sell out (R$)',labels:L,values:V}], options:{chartColors:[PPT.AZUL]}},
+        {type:pptx.ChartType.bar, data:[{name:'Sell out (R$)',labels:L,values:V}], options:{chartColors:[PPT.AZUL],showValue:true,dataLabelColor:'FFFFFF',dataLabelFontSize:8,dataLabelPosition:'inEnd',dataLabelFormatCode:'#,##0'}},
         {type:pptx.ChartType.line,data:[{name:'Acumulado',labels:L,values:C}], options:{chartColors:[PPT.VERDE],secondaryValAxis:true,secondaryCatAxis:true,lineSize:3,lineDataSymbol:'circle',lineDataSymbolSize:6}}
       ],{x:0.5,y:1.7,w:12.3,h:4.7,showLegend:true,legendPos:'b',legendFontSize:11,
          valAxes:[{showValAxisTitle:true,valAxisTitle:'Sell out mensal (R$)',valAxisTitleFontSize:10,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9},{showValAxisTitle:true,valAxisTitle:'Acumulado (R$)',valAxisTitleFontSize:10,valAxisLabelFormatCode:'#,##0',valAxisLabelFontSize:9}],
@@ -600,38 +617,26 @@ async function montarPptx(R,prev,setores,analise,i0,i1){
   /* --- Venda por produto (tabela) --- */
   if(isMulti){
     const vp=R.perProd.filter(p=>p.v>0).sort((a,b)=>b.v-a.v); const top=vp.slice(0,15);
-    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Venda por produto','Top '+top.length+' por sell out · ticket = R$/cliente · freq = meses comprados/cliente');
-    const rows=[[ {text:'Produto',options:HC()},{text:'Lojas',options:HC('right')},{text:'Itens',options:HC('right')},{text:'Sell out',options:HC('right')},{text:'Ticket/cli',options:HC('right')},{text:'Freq',options:HC('right')} ]];
+    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Venda por produto','Top '+top.length+' por sell out · Ticket/loja = R$ médio por loja · Meses/loja = em quantos meses (de '+R.serie.length+') cada loja comprou, em média');
+    const rows=[[ {text:'Produto',options:HC()},{text:'Lojas',options:HC('right')},{text:'Unidades',options:HC('right')},{text:'Sell out',options:HC('right')},{text:'Ticket/loja',options:HC('right')},{text:'Meses/loja',options:HC('right')} ]];
     let tQ=0,tV=0; vp.forEach(p=>{tQ+=p.q;tV+=p.v;});
     top.forEach((p,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF';
       rows.push([ {text:trunc(p.descricao,40),options:CELL(bg)},{text:numFmt(p.clientes),options:CELL(bg,{align:'right'})},{text:numFmt(p.q),options:CELL(bg,{align:'right'})},
-        {text:brl(p.v),options:CELL(bg,{align:'right',bold:true})},{text:brl(p.ticket),options:CELL(bg,{align:'right',color:PPT.MUTED})},{text:p.freq.toFixed(1),options:CELL(bg,{align:'right',color:PPT.MUTED})} ]); });
+        {text:brl(p.v),options:CELL(bg,{align:'right',bold:true})},{text:brl(p.ticket),options:CELL(bg,{align:'right',color:PPT.MUTED})},{text:dec1(p.freq),options:CELL(bg,{align:'right',color:PPT.MUTED})} ]); });
     const tf={bold:true,fill:{color:'E8EBFF'},fontSize:9.5,color:PPT.INK,fontFace:PPT.FONT};
     rows.push([ {text:'TOTAL ('+vp.length+' produtos)',options:tf},{text:'',options:tf},{text:numFmt(tQ),options:Object.assign({align:'right'},tf)},{text:brl(tV),options:Object.assign({align:'right'},tf)},{text:'',options:tf},{text:'',options:tf} ]);
-    s.addTable(rows,{x:0.5,y:1.6,w:12.33,colW:[4.9,1.25,1.55,2.0,1.75,0.88],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.3,valign:'middle'});
+    s.addTable(rows,{x:0.5,y:1.6,w:12.33,colW:[4.6,1.2,1.55,2.0,1.7,1.28],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.3,valign:'middle'});
   }
 
   /* --- Top 15 clientes --- */
   if(R.topClientes.length){
     const tc=R.topClientes.slice(0,15); const tot=R.valor||1; const sh=tc.reduce((a,c)=>a+c.v,0)/tot*100;
-    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Top 15 clientes','Maiores compradores no período · representam '+sh.toFixed(0)+'% do sell out');
-    const rows=[[ {text:'#',options:HC('center')},{text:'Cliente',options:HC()},{text:'Setor',options:HC()},{text:'Prod.',options:HC('right')},{text:'Freq',options:HC('right')},{text:'Itens',options:HC('right')},{text:'Sell out',options:HC('right')} ]];
+    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Top 15 clientes','Maiores compradores · juntos são '+sh.toFixed(0)+'% do sell out · Prod. = produtos diferentes · Meses = em quantos meses comprou');
+    const rows=[[ {text:'#',options:HC('center')},{text:'Cliente',options:HC()},{text:'Setor',options:HC()},{text:'Prod.',options:HC('right')},{text:'Meses',options:HC('right')},{text:'Unidades',options:HC('right')},{text:'Sell out',options:HC('right')} ]];
     tc.forEach((c,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF';
       rows.push([ {text:String(idx+1),options:CELL(bg,{align:'center',color:PPT.MUTED})},{text:trunc(c.nome,34),options:CELL(bg)},{text:trunc(c.setor,18),options:CELL(bg,{color:PPT.MUTED})},
         {text:numFmt(c.nprod),options:CELL(bg,{align:'right'})},{text:String(c.meses),options:CELL(bg,{align:'right',color:PPT.MUTED})},{text:numFmt(c.q),options:CELL(bg,{align:'right'})},{text:brl(c.v),options:CELL(bg,{align:'right',bold:true})} ]); });
     s.addTable(rows,{x:0.5,y:1.6,w:12.33,colW:[0.5,4.25,2.35,0.95,0.95,1.4,1.93],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.3,valign:'middle'});
-  }
-
-  /* --- Distribuição por setor --- */
-  if(setores.length && isMulti){
-    s=pptx.addSlide({masterName:'M'}); addTitle(s,'Distribuição por setor', escopo==='Visão geral'?'Setores e regionais atendidos no período':escopo+' · no período');
-    const rows=[[ {text:'Setor',options:HC()},{text:'Regional',options:HC()},{text:'Clientes',options:HC('right')},{text:'Itens',options:HC('right')},{text:'Sell out',options:HC('right')} ]];
-    let tC=0,tQ=0,tV=0;
-    setores.slice(0,12).forEach((g,idx)=>{ const bg=idx%2?'F4F6FB':'FFFFFF'; tC+=g.clientes;tQ+=g.q;tV+=g.v;
-      rows.push([ {text:g.nome,options:CELL(bg)},{text:SETOR_REGIONAL[g.nome]||'—',options:CELL(bg,{color:PPT.MUTED})},{text:numFmt(g.clientes),options:CELL(bg,{align:'right'})},{text:numFmt(g.q),options:CELL(bg,{align:'right'})},{text:brl(g.v),options:CELL(bg,{align:'right',bold:true})} ]); });
-    const tf={bold:true,fill:{color:'E8EBFF'},fontSize:9.5,color:PPT.INK,fontFace:PPT.FONT};
-    rows.push([ {text:setores.length>12?('TOTAL (top 12 de '+setores.length+')'):'TOTAL',options:tf},{text:'',options:tf},{text:numFmt(tC),options:Object.assign({align:'right'},tf)},{text:numFmt(tQ),options:Object.assign({align:'right'},tf)},{text:brl(tV),options:Object.assign({align:'right'},tf)} ]);
-    s.addTable(rows,{x:0.5,y:1.65,w:12.33,colW:[4.5,2.6,1.6,1.6,2.03],border:{type:'solid',color:PPT.LINE,pt:1},rowH:0.32,valign:'middle'});
   }
 
   /* --- Análise do período --- */
