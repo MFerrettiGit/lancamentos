@@ -410,7 +410,19 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>setM
 function isAuth(){ try{ return JSON.parse(localStorage.getItem('rel-acc')||'null'); }catch(e){ return null; } }
 async function sha256hex(s){ const b=new TextEncoder().encode((s||'').toLowerCase()); const h=await crypto.subtle.digest('SHA-256',b); return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 function showGate(){ document.getElementById('gate').style.display='flex'; document.getElementById('searchcard').style.display='none'; document.getElementById('acessoBar').style.display='none'; document.getElementById('resultado').style.display='none'; setTimeout(()=>document.getElementById('gatePass').focus(),50); }
-function revelar(acc){ try{ localStorage.setItem('rel-acc',JSON.stringify(acc)); }catch(e){} applyAcc(acc); document.getElementById('gate').style.display='none'; document.getElementById('searchcard').style.display=''; if(!applyDeepLink()) setMode('marca'); }
+function revelar(acc){ try{ localStorage.setItem('rel-acc',JSON.stringify(acc)); }catch(e){} applyAcc(acc); document.getElementById('gate').style.display='none'; aplicarEscopoVendedor(acc); }
+function aplicarEscopoVendedor(acc){
+  const isVendedor = acc && acc.escopo !== 'todos';
+  if(isVendedor){
+    // vendedor: só pode ver o produto específico vindo de ?codigo=
+    if(!applyDeepLink()){ location.href='index.html'; return; }
+    // oculta busca geral e abas
+    document.getElementById('searchcard').style.display='none';
+  } else {
+    document.getElementById('searchcard').style.display='';
+    if(!applyDeepLink()) setMode('marca');
+  }
+}
 async function tentarSenha(){ const hex=await sha256hex(document.getElementById('gatePass').value.trim()); const acc=ACESSOS.find(a=>a.h===hex); if(acc){ revelar(acc); } else { document.getElementById('gateErr').textContent='Senha incorreta.'; } }
 document.getElementById('gateBtn').addEventListener('click',tentarSenha);
 document.getElementById('gatePass').addEventListener('keydown',e=>{ if(e.key==='Enter') tentarSenha(); });
@@ -733,7 +745,7 @@ pptBtn.addEventListener('click',criarApresentacao);
 
 /* ===== Init ===== */
 const saved=isAuth();
-if(saved){ applyAcc(saved); document.getElementById('gate').style.display='none'; document.getElementById('searchcard').style.display=''; if(!applyDeepLink()) setMode('marca'); }
+if(saved){ applyAcc(saved); document.getElementById('gate').style.display='none'; aplicarEscopoVendedor(saved); }
 else showGate();
 
 /* ===== Tema ===== */
