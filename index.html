@@ -22,6 +22,7 @@ header::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;hei
 h1.title{font-family:'Plus Jakarta Sans';font-weight:800;font-size:clamp(1.9rem,5vw,3rem);margin-top:22px;line-height:1.05}
 .subtitle{color:#d4d7ff;font-size:1.05rem;margin-top:8px;max-width:680px}
 .gate{position:fixed;inset:0;background:linear-gradient(135deg,var(--azul-dark),var(--azul));display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+#themeBtn{position:fixed;top:12px;right:16px;z-index:200}
 .gate-card{background:var(--card);border-radius:20px;padding:34px 30px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
 .gate-card img{height:40px;margin-bottom:18px}
 .gate-card h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.3rem;margin-bottom:8px}
@@ -218,12 +219,17 @@ function applyAcc(acc){
 
 /* ===== Gate ===== */
 let _accToken = null; // token em memória — não depende de storage
+function encToken(acc){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify(acc)))); }catch(e){ return null; } }
+function decToken(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s)))); }catch(e){ return null; } }
 function saveAcc(acc){
-  _accToken = btoa(JSON.stringify(acc));
+  _accToken = encToken(acc);
   try{localStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){}
   try{sessionStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){}
 }
 function isAuth(){
+  // 1) URL hash (vindo de produto.html com token)
+  try{ const m=location.hash.match(/[#&]t=([^&]+)/); if(m){ const a=decToken(m[1]); if(a&&a.h) return a; } }catch(e){}
+  // 2) storage
   try{ return JSON.parse(localStorage.getItem('rel-acc')||sessionStorage.getItem('rel-acc')||'null'); }catch(e){ return null; }
 }
 // ao clicar em Relatórios, passa o token no hash da URL para não depender de storage

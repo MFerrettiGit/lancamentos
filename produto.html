@@ -127,7 +127,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
       <img class="brand" src="assets/ferretti-branco.png" alt="Ferretti distribuidora" />
       <div class="topbar-actions">
         <button id="themeBtn" class="themebtn" type="button"></button>
-        <a class="navbtn" href="index.html">← Lançamentos</a>
+        <a class="navbtn" id="backBtn" href="index.html">← Lançamentos</a>
       </div>
     </div>
     <h1 class="title">Relatórios</h1>
@@ -407,17 +407,18 @@ function setMode(mode){ document.querySelectorAll('.tab').forEach(t=>t.classList
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>setMode(t.dataset.mode)));
 
 /* ===== Gate por senha com escopo ===== */
+let _accToken = null;
+function encToken(acc){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify(acc)))); }catch(e){ return null; } }
+function decToken(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s)))); }catch(e){ return null; } }
 function saveAcc(acc){
+  _accToken = encToken(acc);
   try{localStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){}
   try{sessionStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){}
 }
 function isAuth(){
-  // 1) tenta URL hash (passado pelo index.html quando storage está bloqueado)
-  try{
-    const m=location.hash.match(/[#&]t=([^&]+)/);
-    if(m){ const acc=JSON.parse(atob(m[1])); if(acc&&acc.h) return acc; }
-  }catch(e){}
-  // 2) storage normal
+  // 1) URL hash (passado pelo index.html)
+  try{ const m=location.hash.match(/[#&]t=([^&]+)/); if(m){ const a=decToken(m[1]); if(a&&a.h) return a; } }catch(e){}
+  // 2) storage
   try{ return JSON.parse(localStorage.getItem('rel-acc')||sessionStorage.getItem('rel-acc')||'null'); }catch(e){ return null; }
 }
 async function sha256hex(s){ const b=new TextEncoder().encode((s||'').toLowerCase()); const h=await crypto.subtle.digest('SHA-256',b); return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
@@ -759,6 +760,15 @@ pptBtn.addEventListener('click',criarApresentacao);
 const saved=isAuth();
 if(saved){ saveAcc(saved); applyAcc(saved); document.getElementById('gate').style.display='none'; aplicarEscopoVendedor(saved); }
 else showGate();
+
+// "← Lançamentos" passa o token de volta para não precisar reautenticar
+(function(){
+  const bb=document.getElementById('backBtn');
+  if(!bb) return;
+  bb.addEventListener('click',function(e){
+    if(_accToken){ e.preventDefault(); location.href='index.html#t='+_accToken; }
+  });
+})();
 
 /* ===== Tema ===== */
 let _tema=(document.documentElement.getAttribute('data-theme')||'dark');
