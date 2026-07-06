@@ -22,7 +22,7 @@ header::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;hei
 h1.title{font-family:'Plus Jakarta Sans';font-weight:800;font-size:clamp(1.9rem,5vw,3rem);margin-top:22px;line-height:1.05}
 .subtitle{color:#d4d7ff;font-size:1.05rem;margin-top:8px;max-width:680px}
 .gate{position:fixed;inset:0;background:linear-gradient(135deg,var(--azul-dark),var(--azul));display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
-#themeBtn{position:fixed;top:12px;right:16px;z-index:200}
+.gate-theme{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:5px 10px;font-size:.8rem;cursor:pointer}
 .gate-card{background:var(--card);border-radius:20px;padding:34px 30px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
 .gate-card img{height:40px;margin-bottom:18px}
 .gate-card h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.3rem;margin-bottom:8px}
@@ -73,6 +73,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 <body>
 
 <div class="gate" id="gate" style="display:none">
+  <button class="gate-theme" id="gateThemeBtn" type="button"></button>
   <div class="gate-card">
     <img src="assets/ferretti-azul.png" alt="Ferretti" />
     <h2>Acompanhamento de Lançamentos</h2>
@@ -213,7 +214,12 @@ function applyAcc(acc){
   document.getElementById('conteudo').style.display='';
   // vendedores (setor/regional) não têm acesso ao relatório geral de produtos
   const relBtn=document.getElementById('relBtn');
-  if(relBtn) relBtn.style.display=(acc.escopo==='todos')?'':'none';
+  if(relBtn){
+    const visivel=(acc.escopo==='todos');
+    relBtn.style.display=visivel?'':'none';
+    // atualiza href com token para não depender de storage na outra página
+    if(visivel && _accToken) relBtn.href='produto.html#t='+_accToken;
+  }
   renderConteudo();
 }
 
@@ -245,7 +251,6 @@ async function tentarSenha(){ const hex=await sha256hex(document.getElementById(
 document.getElementById('gateBtn').addEventListener('click',tentarSenha);
 document.getElementById('gatePass').addEventListener('keydown',e=>{ if(e.key==='Enter') tentarSenha(); });
 document.getElementById('sairBtn').addEventListener('click',()=>{ _accToken=null; try{localStorage.removeItem('rel-acc');}catch(e){} try{sessionStorage.removeItem('rel-acc');}catch(e){} location.reload(); });
-document.getElementById('relBtn').addEventListener('click',e=>{ e.preventDefault(); irParaRelatorios(); });
 
 const saved=isAuth();
 if(saved){ saveAcc(saved); document.getElementById('gate').style.display='none'; applyAcc(saved); }
@@ -253,8 +258,9 @@ else showGate();
 
 /* ===== Tema ===== */
 let _tema = (document.documentElement.getAttribute('data-theme')||'dark');
-function setTheme(t){ _tema=t; document.documentElement.setAttribute('data-theme',t); try{localStorage.setItem('ferretti-theme',t);}catch(e){} try{sessionStorage.setItem('ferretti-theme',t);}catch(e){} const b=document.getElementById('themeBtn'); if(b)b.textContent=(t==='dark'?'☀️ Claro':'🌙 Escuro'); }
+function setTheme(t){ _tema=t; document.documentElement.setAttribute('data-theme',t); try{localStorage.setItem('ferretti-theme',t);}catch(e){} try{sessionStorage.setItem('ferretti-theme',t);}catch(e){} const lbl=t==='dark'?'☀️ Claro':'🌙 Escuro'; const b=document.getElementById('themeBtn'); if(b)b.textContent=lbl; const gb=document.getElementById('gateThemeBtn'); if(gb)gb.textContent=lbl; }
 document.getElementById('themeBtn').addEventListener('click',function(){ setTheme(_tema==='dark'?'light':'dark'); });
+document.getElementById('gateThemeBtn').addEventListener('click',function(){ setTheme(_tema==='dark'?'light':'dark'); });
 setTheme(_tema);
 </script>
 </body>

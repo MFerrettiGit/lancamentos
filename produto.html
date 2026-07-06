@@ -246,6 +246,9 @@ function applyAcc(acc){
   let extra = ALLOWED ? (' · ' + ALLOWED.size + ' setor(es)') : '';
   document.getElementById('acessoLabel').textContent = 'Acesso: ' + acc.label + extra;
   document.getElementById('yoyWrap').style.display = '';
+  // atualiza href do botão voltar com token para não precisar reautenticar
+  const bb=document.getElementById('backBtn');
+  if(bb && _accToken) bb.href='index.html#t='+_accToken;
 }
 
 /* ===== Período ===== */
@@ -761,14 +764,6 @@ const saved=isAuth();
 if(saved){ saveAcc(saved); applyAcc(saved); document.getElementById('gate').style.display='none'; aplicarEscopoVendedor(saved); }
 else showGate();
 
-// "← Lançamentos" passa o token de volta para não precisar reautenticar
-(function(){
-  const bb=document.getElementById('backBtn');
-  if(!bb) return;
-  bb.addEventListener('click',function(e){
-    if(_accToken){ e.preventDefault(); location.href='index.html#t='+_accToken; }
-  });
-})();
 
 /* ===== Tema ===== */
 let _tema=(document.documentElement.getAttribute('data-theme')||'dark');
