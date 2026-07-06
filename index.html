@@ -219,7 +219,7 @@ function applyAcc(acc){
 }
 
 /* ===== Gate ===== */
-let _accToken = null; // token em memória — não depende de storage
+var _accToken = null; // token em memória — não depende de storage
 function encToken(acc){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify(acc)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }catch(e){ return null; } }
 function decToken(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/'))))); }catch(e){ return null; } }
 function saveAcc(acc){

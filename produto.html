@@ -407,7 +407,7 @@ function setMode(mode){ document.querySelectorAll('.tab').forEach(t=>t.classList
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>setMode(t.dataset.mode)));
 
 /* ===== Gate por senha com escopo ===== */
-let _accToken = null;
+var _accToken = null;
 function encToken(acc){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify(acc)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }catch(e){ return null; } }
 function decToken(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/'))))); }catch(e){ return null; } }
 function saveAcc(acc){
