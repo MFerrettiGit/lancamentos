@@ -16,7 +16,7 @@ header{background:linear-gradient(135deg,var(--azul-dark),var(--azul) 55%,var(--
 header::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border:40px solid rgba(255,255,255,.06);border-radius:50%}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .brand{height:38px}
-.topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.topbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;flex-shrink:0}
 .themebtn,.navbtn{display:inline-flex;align-items:center;gap:6px;font-family:'Plus Jakarta Sans';font-size:.85rem;font-weight:600;color:#fff;background:rgba(255,255,255,.14);border:none;text-decoration:none;padding:8px 14px;border-radius:999px;cursor:pointer}
 .themebtn:hover,.navbtn:hover{background:rgba(255,255,255,.26)}
 h1.title{font-family:'Plus Jakarta Sans';font-weight:800;font-size:clamp(1.9rem,5vw,3rem);margin-top:22px;line-height:1.05}
@@ -225,8 +225,8 @@ function applyAcc(acc){
 
 /* ===== Gate ===== */
 let _accToken = null; // token em memória — não depende de storage
-function encToken(acc){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify(acc)))); }catch(e){ return null; } }
-function decToken(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s)))); }catch(e){ return null; } }
+function encToken(acc){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify(acc)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }catch(e){ return null; } }
+function decToken(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/'))))); }catch(e){ return null; } }
 function saveAcc(acc){
   _accToken = encToken(acc);
   try{localStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){}
@@ -237,11 +237,6 @@ function isAuth(){
   try{ const m=location.hash.match(/[#&]t=([^&]+)/); if(m){ const a=decToken(m[1]); if(a&&a.h) return a; } }catch(e){}
   // 2) storage
   try{ return JSON.parse(localStorage.getItem('rel-acc')||sessionStorage.getItem('rel-acc')||'null'); }catch(e){ return null; }
-}
-// ao clicar em Relatórios, passa o token no hash da URL para não depender de storage
-function irParaRelatorios(){
-  const href = _accToken ? 'produto.html#t=' + _accToken : 'produto.html';
-  location.href = href;
 }
 async function sha256hex(s){ const b=new TextEncoder().encode((s||'').toLowerCase()); const h=await crypto.subtle.digest('SHA-256',b); return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 function showGate(){ document.getElementById('gate').style.display='flex'; document.getElementById('conteudo').style.display='none'; document.getElementById('acessoBar').style.display='none'; setTimeout(()=>document.getElementById('gatePass').focus(),50); }
