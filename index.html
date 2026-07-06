@@ -217,8 +217,20 @@ function applyAcc(acc){
 }
 
 /* ===== Gate ===== */
-function saveAcc(acc){ try{localStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){} try{sessionStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){} }
-function isAuth(){ try{ return JSON.parse(localStorage.getItem('rel-acc')||sessionStorage.getItem('rel-acc')||'null'); }catch(e){ return null; } }
+let _accToken = null; // token em memória — não depende de storage
+function saveAcc(acc){
+  _accToken = btoa(JSON.stringify(acc));
+  try{localStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){}
+  try{sessionStorage.setItem('rel-acc',JSON.stringify(acc));}catch(e){}
+}
+function isAuth(){
+  try{ return JSON.parse(localStorage.getItem('rel-acc')||sessionStorage.getItem('rel-acc')||'null'); }catch(e){ return null; }
+}
+// ao clicar em Relatórios, passa o token no hash da URL para não depender de storage
+function irParaRelatorios(){
+  const href = _accToken ? 'produto.html#t=' + _accToken : 'produto.html';
+  location.href = href;
+}
 async function sha256hex(s){ const b=new TextEncoder().encode((s||'').toLowerCase()); const h=await crypto.subtle.digest('SHA-256',b); return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 function showGate(){ document.getElementById('gate').style.display='flex'; document.getElementById('conteudo').style.display='none'; document.getElementById('acessoBar').style.display='none'; setTimeout(()=>document.getElementById('gatePass').focus(),50); }
 async function tentarSenha(){ const hex=await sha256hex(document.getElementById('gatePass').value.trim()); const acc=ACESSOS.find(a=>a.h===hex);
@@ -226,16 +238,18 @@ async function tentarSenha(){ const hex=await sha256hex(document.getElementById(
   else document.getElementById('gateErr').textContent='Senha incorreta.'; }
 document.getElementById('gateBtn').addEventListener('click',tentarSenha);
 document.getElementById('gatePass').addEventListener('keydown',e=>{ if(e.key==='Enter') tentarSenha(); });
-document.getElementById('sairBtn').addEventListener('click',()=>{ try{localStorage.removeItem('rel-acc');}catch(e){} try{sessionStorage.removeItem('rel-acc');}catch(e){} location.reload(); });
+document.getElementById('sairBtn').addEventListener('click',()=>{ _accToken=null; try{localStorage.removeItem('rel-acc');}catch(e){} try{sessionStorage.removeItem('rel-acc');}catch(e){} location.reload(); });
+document.getElementById('relBtn').addEventListener('click',e=>{ e.preventDefault(); irParaRelatorios(); });
 
 const saved=isAuth();
-if(saved){ document.getElementById('gate').style.display='none'; applyAcc(saved); }
+if(saved){ saveAcc(saved); document.getElementById('gate').style.display='none'; applyAcc(saved); }
 else showGate();
 
 /* ===== Tema ===== */
-function setTheme(t){ document.documentElement.setAttribute('data-theme',t); try{localStorage.setItem('ferretti-theme',t);}catch(e){} const b=document.getElementById('themeBtn'); if(b)b.textContent=(t==='dark'?'☀️ Claro':'🌙 Escuro'); }
-document.getElementById('themeBtn').addEventListener('click',function(){ const a=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light'; setTheme(a==='dark'?'light':'dark'); });
-setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light');
+let _tema = (document.documentElement.getAttribute('data-theme')||'dark');
+function setTheme(t){ _tema=t; document.documentElement.setAttribute('data-theme',t); try{localStorage.setItem('ferretti-theme',t);}catch(e){} try{sessionStorage.setItem('ferretti-theme',t);}catch(e){} const b=document.getElementById('themeBtn'); if(b)b.textContent=(t==='dark'?'☀️ Claro':'🌙 Escuro'); }
+document.getElementById('themeBtn').addEventListener('click',function(){ setTheme(_tema==='dark'?'light':'dark'); });
+setTheme(_tema);
 </script>
 </body>
 </html>
