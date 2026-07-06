@@ -90,7 +90,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
       <img class="brand" src="assets/ferretti-branco.png" alt="Ferretti distribuidora" />
       <div class="topbar-actions">
         <button id="themeBtn" class="themebtn" type="button"></button>
-        <a class="navbtn" id="relBtn" href="produto.html">📊 Relatórios</a>
+        <button class="navbtn" id="relBtn" onclick="location.href='produto.html'+(_accToken?'#t='+_accToken:'')" style="display:none">📊 Relatórios</button>
       </div>
     </div>
     <h1 class="title">Acompanhamento de Lançamentos</h1>
@@ -214,12 +214,7 @@ function applyAcc(acc){
   document.getElementById('conteudo').style.display='';
   // vendedores (setor/regional) não têm acesso ao relatório geral de produtos
   const relBtn=document.getElementById('relBtn');
-  if(relBtn){
-    const visivel=(acc.escopo==='todos');
-    relBtn.style.display=visivel?'':'none';
-    // atualiza href com token para não depender de storage na outra página
-    if(visivel && _accToken) relBtn.href='produto.html#t='+_accToken;
-  }
+  if(relBtn) relBtn.style.display=(acc.escopo==='todos')?'':'none';
   renderConteudo();
 }
 

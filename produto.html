@@ -127,7 +127,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
       <img class="brand" src="assets/ferretti-branco.png" alt="Ferretti distribuidora" />
       <div class="topbar-actions">
         <button id="themeBtn" class="themebtn" type="button"></button>
-        <a class="navbtn" id="backBtn" href="index.html">← Lançamentos</a>
+        <button class="navbtn" id="backBtn" onclick="location.href='index.html'+(_accToken?'#t='+_accToken:'')">← Lançamentos</button>
       </div>
     </div>
     <h1 class="title">Relatórios</h1>
@@ -246,9 +246,6 @@ function applyAcc(acc){
   let extra = ALLOWED ? (' · ' + ALLOWED.size + ' setor(es)') : '';
   document.getElementById('acessoLabel').textContent = 'Acesso: ' + acc.label + extra;
   document.getElementById('yoyWrap').style.display = '';
-  // atualiza href do botão voltar com token para não precisar reautenticar
-  const bb=document.getElementById('backBtn');
-  if(bb && _accToken) bb.href='index.html#t='+_accToken;
 }
 
 /* ===== Período ===== */
