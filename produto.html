@@ -95,6 +95,17 @@ h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.45rem;display:fle
 .tbl-wrap{overflow-x:auto}.tbl a{color:var(--azul);text-decoration:none;font-weight:600}.tbl a:hover{text-decoration:underline}
 .up{color:var(--verde-2);font-weight:700}.down{color:var(--vermelho);font-weight:700}
 .setor-item{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;background:var(--bg)}
+.rede-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.rede-row:last-child{border-bottom:none}
+.rede-row .rede-nome{font-weight:600;font-size:.88rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rede-row .rede-stats{font-size:.82rem;color:var(--muted);white-space:nowrap;display:flex;gap:12px;align-items:center}
+.rede-row .rede-tag{font-size:.7rem;background:var(--line);border-radius:4px;padding:1px 5px;color:var(--muted);white-space:nowrap}
+.rede-row .rede-arrow{color:var(--muted);font-size:.75rem;transition:transform .15s}
+.rede-row.open .rede-arrow{transform:rotate(180deg)}
+.lojas-body{display:none;padding:4px 0 2px 12px}
+.lojas-body.open{display:block}
+.lojas-body .tbl{font-size:.82rem}
+.lojas-body .tbl th,.lojas-body .tbl td{padding:5px 8px}
 .setor-item summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-family:'Plus Jakarta Sans';font-weight:700;font-size:.95rem}
 .setor-item summary::-webkit-details-marker{display:none}
 .setor-item summary::after{content:'\25be';color:var(--muted);font-size:.8rem;flex:none}
@@ -354,7 +365,17 @@ function buildSetores(prods, intersect, i0, i1){
     g.clientes++; g.v+=o.v; g.q+=o.q; g.lista.push({cod,nome:o.nome,v:o.v,q:o.q});
   });
   const arr=Object.values(bySetor).sort((a,b)=>b.v-a.v);
-  arr.forEach(s=>s.lista.sort((a,b)=>b.v-a.v));
+  arr.forEach(s=>{
+    s.lista.sort((a,b)=>b.v-a.v);
+    // agrupa lojas pela base do código (parte antes do '-')
+    const byRede={};
+    s.lista.forEach(c=>{
+      const base=c.cod.split('-')[0];
+      if(!byRede[base]){ byRede[base]={base,nome:c.nome,v:0,q:0,lojas:[]}; }
+      byRede[base].v+=c.v; byRede[base].q+=c.q; byRede[base].lojas.push(c);
+    });
+    s.redes=Object.values(byRede).sort((a,b)=>b.v-a.v);
+  });
   return arr;
 }
 function renderSetores(setores, hint, emptyMsg){
@@ -363,9 +384,23 @@ function renderSetores(setores, hint, emptyMsg){
   box.style.display='';
   if(!setores.length){ body.innerHTML=''; body.style.display='none'; empty.style.display=''; empty.textContent = emptyMsg || 'Sem clientes no seu acesso.'; return; }
   body.style.display=''; empty.style.display='none';
-  body.innerHTML=setores.map(s=>`<details class="setor-item"><summary><span>${escapeHtml(s.nome)}</span><span class="setor-stats">${numFmt(s.clientes)} cliente(s) · ${numFmt(s.q)} un · ${brl(s.v)}</span></summary>
-    <div class="disclosure-body tbl-wrap"><table class="tbl"><thead><tr><th>Cliente</th><th>Código</th><th class="num">Quantidade</th><th class="num">Valor</th></tr></thead>
-    <tbody>${s.lista.map(c=>`<tr><td>${escapeHtml(c.nome)}</td><td>${escapeHtml(c.cod)}</td><td class="num">${numFmt(c.q)}</td><td class="num">${brl(c.v)}</td></tr>`).join('')}</tbody></table></div></details>`).join('');
+  body.innerHTML=setores.map(s=>{
+    const redesHtml=(s.redes||[]).map(r=>{
+      const multi=r.lojas.length>1;
+      const lojasHtml=multi?`<div class="lojas-body"><table class="tbl"><thead><tr><th>Loja</th><th class="num">Qtd</th><th class="num">Valor</th></tr></thead><tbody>${r.lojas.map(l=>`<tr><td>${escapeHtml(l.cod)}</td><td class="num">${numFmt(l.q)}</td><td class="num">${brl(l.v)}</td></tr>`).join('')}</tbody></table></div>`:'';
+      const tag=multi?`<span class="rede-tag">${r.lojas.length} lojas</span>`:'';
+      return `<div class="rede-row${multi?' multi':''}"><span class="rede-nome">${escapeHtml(r.nome)}</span><span class="rede-stats">${tag}<span>${numFmt(r.q)} un</span><span>${brl(r.v)}</span>${multi?'<span class="rede-arrow">&#9660;</span>':''}</span></div>${lojasHtml}`;
+    }).join('');
+    return `<details class="setor-item"><summary><span>${escapeHtml(s.nome)}</span><span class="setor-stats">${numFmt(s.clientes)} loja(s) · ${numFmt(s.q)} un · ${brl(s.v)}</span></summary><div class="disclosure-body">${redesHtml}</div></details>`;
+  }).join('');
+  // clique nas redes multi-loja expande as lojas
+  body.querySelectorAll('.rede-row.multi').forEach(row=>{
+    row.addEventListener('click',()=>{
+      row.classList.toggle('open');
+      const lb=row.nextElementSibling;
+      if(lb&&lb.classList.contains('lojas-body')) lb.classList.toggle('open');
+    });
+  });
 }
 
 /* ===== Modos ===== */
