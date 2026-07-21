@@ -100,6 +100,8 @@ h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:1.45rem;display:fle
 .rede-row .rede-nome{font-weight:600;font-size:.88rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rede-row .rede-stats{font-size:.82rem;color:var(--muted);white-space:nowrap;display:flex;gap:12px;align-items:center}
 .rede-row .rede-tag{font-size:.7rem;background:var(--line);border-radius:4px;padding:1px 5px;color:var(--muted);white-space:nowrap}
+.rede-row .rede-ult{font-size:.78rem;color:var(--azul);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+[data-theme="dark"] .rede-row .rede-ult{color:#aeb4ff}
 .rede-row .rede-arrow{color:var(--muted);font-size:.75rem;transition:transform .15s}
 .rede-row.open .rede-arrow{transform:rotate(180deg)}
 .lojas-body{display:none;padding:4px 0 2px 12px}
@@ -217,6 +219,7 @@ footer{margin-top:54px;padding:30px 0 50px;color:var(--muted);font-size:.85rem;t
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 function fmtData(iso){ const p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function ultimaMes(i){ return (i>=0 && MESES[i]) ? mesLabel(MESES[i]) : '—'; }
 function escapeAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
@@ -356,13 +359,13 @@ function buildSetores(prods, intersect, i0, i1){
   prods.forEach(p=>{ (p.setores||[]).forEach(s=>{
     if(isExcl(s.nome)) return;
     if(ALLOWED && !ALLOWED.has(s.nome)) return;
-    s.lista.forEach(c=>{ let v=0,q=0,inR=false; (c.mv||[]).forEach(e=>{ if(e[0]>=i0&&e[0]<=i1){ v+=e[1]; q+=e[2]; inR=true; } }); if(!inR) return;
-      let o=byCli[c.cod]; if(!o){ o=byCli[c.cod]={setor:s.nome,nome:c.nome,v:0,q:0,np:0}; } o.v+=v; o.q+=q; o.np++; });
+    s.lista.forEach(c=>{ let v=0,q=0,last=-1,inR=false; (c.mv||[]).forEach(e=>{ if(e[0]>=i0&&e[0]<=i1){ v+=e[1]; q+=e[2]; if(e[0]>last)last=e[0]; inR=true; } }); if(!inR) return;
+      let o=byCli[c.cod]; if(!o){ o=byCli[c.cod]={setor:s.nome,nome:c.nome,v:0,q:0,np:0,last:-1}; } o.v+=v; o.q+=q; o.np++; if(last>o.last)o.last=last; });
   }); });
   const n=prods.length, bySetor={};
   Object.keys(byCli).forEach(cod=>{ const o=byCli[cod]; if(intersect && o.np<n) return;
     let g=bySetor[o.setor]; if(!g){ g=bySetor[o.setor]={nome:o.setor,clientes:0,v:0,q:0,lista:[]}; }
-    g.clientes++; g.v+=o.v; g.q+=o.q; g.lista.push({cod,nome:o.nome,v:o.v,q:o.q});
+    g.clientes++; g.v+=o.v; g.q+=o.q; g.lista.push({cod,nome:o.nome,v:o.v,q:o.q,last:o.last});
   });
   const arr=Object.values(bySetor).sort((a,b)=>b.v-a.v);
   arr.forEach(s=>{
@@ -371,8 +374,8 @@ function buildSetores(prods, intersect, i0, i1){
     const byRede={};
     s.lista.forEach(c=>{
       const base=c.cod.split('-')[0];
-      if(!byRede[base]){ byRede[base]={base,nome:c.nome,v:0,q:0,lojas:[]}; }
-      byRede[base].v+=c.v; byRede[base].q+=c.q; byRede[base].lojas.push(c);
+      if(!byRede[base]){ byRede[base]={base,nome:c.nome,v:0,q:0,last:-1,lojas:[]}; }
+      byRede[base].v+=c.v; byRede[base].q+=c.q; if(c.last>byRede[base].last)byRede[base].last=c.last; byRede[base].lojas.push(c);
     });
     s.redes=Object.values(byRede).sort((a,b)=>b.v-a.v);
   });
@@ -387,9 +390,9 @@ function renderSetores(setores, hint, emptyMsg){
   body.innerHTML=setores.map(s=>{
     const redesHtml=(s.redes||[]).map(r=>{
       const multi=r.lojas.length>1;
-      const lojasHtml=multi?`<div class="lojas-body"><table class="tbl"><thead><tr><th>Loja</th><th class="num">Qtd</th><th class="num">Valor</th></tr></thead><tbody>${r.lojas.map(l=>`<tr><td>${escapeHtml(l.cod)}</td><td class="num">${numFmt(l.q)}</td><td class="num">${brl(l.v)}</td></tr>`).join('')}</tbody></table></div>`:'';
+      const lojasHtml=multi?`<div class="lojas-body"><table class="tbl"><thead><tr><th>Loja</th><th class="num">Qtd</th><th class="num">Valor</th><th class="num">Última compra</th></tr></thead><tbody>${r.lojas.map(l=>`<tr><td>${escapeHtml(l.cod)}</td><td class="num">${numFmt(l.q)}</td><td class="num">${brl(l.v)}</td><td class="num">${ultimaMes(l.last)}</td></tr>`).join('')}</tbody></table></div>`:'';
       const tag=multi?`<span class="rede-tag">${r.lojas.length} lojas</span>`:'';
-      return `<div class="rede-row${multi?' multi':''}"><span class="rede-nome">${escapeHtml(r.nome)}</span><span class="rede-stats">${tag}<span>${numFmt(r.q)} un</span><span>${brl(r.v)}</span>${multi?'<span class="rede-arrow">&#9660;</span>':''}</span></div>${lojasHtml}`;
+      return `<div class="rede-row${multi?' multi':''}"><span class="rede-nome">${escapeHtml(r.nome)}</span><span class="rede-stats">${tag}<span>${numFmt(r.q)} un</span><span>${brl(r.v)}</span><span class="rede-ult" title="Última compra">últ. ${ultimaMes(r.last)}</span>${multi?'<span class="rede-arrow">&#9660;</span>':''}</span></div>${lojasHtml}`;
     }).join('');
     return `<details class="setor-item"><summary><span>${escapeHtml(s.nome)}</span><span class="setor-stats">${numFmt(s.clientes)} loja(s) · ${numFmt(s.q)} un · ${brl(s.v)}</span></summary><div class="disclosure-body">${redesHtml}</div></details>`;
   }).join('');
